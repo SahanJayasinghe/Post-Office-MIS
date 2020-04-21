@@ -6,8 +6,12 @@ const addresses = require('./app/controllers/addresses');
 const normal_post_service = require('./app/controllers/normal_post_service');
 const app = express();
 
-console.log(`Current timestamp 1: ${new Date().getTime()}`);
-console.log(`Current timestamp 2: ${new Date().getTime()}`);
+let dt = new Date();
+console.log(`Current timestamp: ${dt.getTime()}`);
+console.log(`Current date: ${dt.toLocaleDateString()}`);
+console.log(`Current time: ${dt.toTimeString()}`);
+
+// console.log(`Current timestamp 2: ${new Date().getTime()}`);
 
 console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
 console.log(`app: ${app.get('env')}`);

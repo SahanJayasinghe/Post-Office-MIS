@@ -24,6 +24,8 @@ router.put('/', async (req, res) => {
     try {
         // delivery_address_id: id
         console.log(req.body);
+
+        // generate QR code which consists delivery address, current date time
         let result = await Normal_Post.create_normal_post(req.body.id);
         if(result.error){
             res.status(400).send(result.error);
