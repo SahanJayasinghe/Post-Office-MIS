@@ -22,9 +22,17 @@ class DB{
     static query(sql, args){
         return new Promise((resolve, reject) => {
             this.connection.query(sql, args, (err, resultQ) => {
-                if (err)
-                    return reject({query_output: null, query_error: err});
-                resolve({query_output: resultQ, query_error: null});
+                if (err) {
+                    console.log('db_file_reject');
+                    // console.log(err);
+                    console.log(err.sqlState, err.sql, err.sqlMessage);
+                    reject({query_error: err.sqlMessage});                    
+                }
+                else{
+                    console.log('db_file_resolve');
+                    // console.log(resultQ);
+                    resolve({query_output: resultQ, query_error: null});
+                }                
             });
         });
     }

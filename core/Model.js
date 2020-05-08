@@ -59,6 +59,22 @@ class Model {
         console.log(sql);
         return this.db_ins.query(sql, params);
     }
+
+    static call_procedure(proc_name, params){
+        // params is a string or an array
+        let temp = [];
+        let temp_str = '?';
+        if(typeof params != 'string'){
+            params.forEach(element => {
+                temp.push('?');
+            });
+            temp_str = temp.join(',');
+        }
+        let sql = `CALL ${proc_name}(${temp_str})`;
+        console.log(sql);
+        return this.db_ins.query(sql, params);
+        
+    }
 }
 
 module.exports = Model;

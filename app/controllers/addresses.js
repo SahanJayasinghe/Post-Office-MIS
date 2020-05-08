@@ -5,7 +5,7 @@ const Address = require('../models/Address');
 
 router.get('/:id', async (req, res) => {
     try{
-        console.log('going into app/controllers/addresses/id');
+        // console.log('going into app/controllers/addresses/id');
         // let sql = 'SELECT * FROM contacts WHERE id = ?';
         let id = req.params.id;
         // select_contacts(id);
@@ -21,7 +21,8 @@ router.get('/:id', async (req, res) => {
     }
     
     catch(err){
-        console.log('async function error: ' + err.message);
+        console.log('promise reject: ' + err.query_error);
+        res.status(500).send('Server could not perform the action');
     }
 
     // DB.query('SELECT * FROM contacts WHERE id = ?', id)
@@ -49,7 +50,8 @@ router.post('/', async (req, res) => {
         }
     }
     catch(err){
-        console.log('async function error: ' + err.message);        
+        console.log('promise reject: ' + err.query_error);
+        res.status(500).send('Server could not perform the action');      
     }    
 });
 
@@ -64,27 +66,12 @@ router.put('/:id', async (req, res) => {
             res.status(400).send(result.error);
         }
         else{
-            res.status(200).send(result.output.message + " record(s) updated");
+            res.status(200).send(result.output);
         }
     }
     catch(err){
-        console.log('async function error: ' + err.message);        
-    }  
-});
-
-router.delete('/:id', async (req, res) => {
-    try{
-        let result = await Model.remove('contacts', 'id = ?', req.params.id);
-        console.log(result);
-        if(result.error){
-            res.status(400).send(result.error.message);
-        }
-        else{
-            res.status(200).send(result.output.affectedRows + " record(s) deleted");
-        }
-    }
-    catch(err){
-        console.log('async function error: ' + err.message);        
+        console.log('promise reject: ' + err.query_error);
+        res.status(500).send('Server could not perform the action');   
     }  
 });
 

@@ -2,27 +2,46 @@ const Model = require('../../core/Model');
 
 async function get_postal_area(input){
     //input can be postal code or area name
-    if (typeof input == 'number'){
-        let result1 = await Model.select('postal_areas', '*', 'code = ?', input);
-        if(result1.query_error){
-            return {output: null, error: result1.query_error.message};
-        }
-        return result1;
+    const pattern = /^\d+$/;
+    let is_digit = pattern.test('input');
+    console.log(is_digit);
+    let result;
+
+    if (is_digit){
+        result = await Model.select('postal_areas', '*', 'code = ?', input);
+        // if(result1.query_error){
+        //     return {output: null, error: result1.query_error.message};
+        // }
+        // return result1;
     }
     else{
-        let result2 = await Model.select('postal_areas', '*', 'name = ?', input);
-        if(result2.query_error){
-            return {output: null, error: result2.query_error.message};
-        }
-        return result2;
+        result = await Model.select('postal_areas', '*', 'name = ?', input.toLowerCase());
+        // if(result2.query_error){
+        //     return {output: null, error: result2.query_error.message};
+        // }
+        // return result2;
+    }
+
+    if(result.query_error){
+        return {output: null, error: result.query_error.message};
+    }
+    else if(!result.query_output.length){
+        return {output: null, error: `No Postal Area for the given input ${input}`};
+    }
+    return {output: result.query_output[0], error: null};
+}
+
+async function get_all_postal_areas(){
+    let result = await Model.select('postal_areas', '*');
+    if(result.query_error){
+        return {output: null, error: result.query_error.message};
+    }
+    else{
+        return {output: result.query_output, error: null};
     }
 }
 
-function get_all_postal_areas(){
-    return Model.select('postal_areas', '*');
-}
-
-function insert_postal_area(input_obj){
+async function insert_postal_area(input_obj){
     input_obj.name = input_obj.name.toLowerCase(); 
 
     let result1 = await Model.select('postal_areas', '*', 'code = ?', input_obj.code);
