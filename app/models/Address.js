@@ -1,42 +1,41 @@
 const Model = require('../../core/Model');
 
-async function get_address(input){
-    //input can be id or an object containing address details ex: {number: 121\B, postal_area: Moratuwa,10400}
-    if (typeof input == 'string' || typeof input == 'number'){
-        let result1 = await Model.select('addresses', '*', 'id = ?', input);
-        // console.log(result1);
-        if (result1.query_error){
-            return {output: null, error: result1.query_error.message};
-        }
-        else if (!result1.query_output.length){
-            return {output: null, error: 'invalid id'};
-        }
-        else{
-            let postal_code = result1.query_output[0].postal_code;
-            let result2 = await Model.select('postal_areas', 'name', 'code = ?', postal_code);
-            let postal_area = result2.query_output[0].name;
-            let address_obj = result1.query_output[0];
-            address_obj.postal_area = postal_area;
-            return {output: address_obj, error: null};
-        }
+async function get_address_by_id(id){
+    let result1 = await Model.select('addresses', '*', 'id = ?', id);
+    // console.log(result1);
+    if (result1.query_error){
+        return {output: null, error: result1.query_error.message};
+    }
+    else if (!result1.query_output.length){
+        return {output: null, error: 'invalid id'};
     }
     else{
-        let postal_area = input.postal_area.split(',');    //split into an array [Moratuwa, 10400]
-        // let conditions = Object.getOwnPropertyNames(input);
-        // let params = Object.values(input);
-        let result3 = await Model.select('addresses', '*', 'number = ? AND postal_code = ?', [input.number, postal_area[1]]);
-        console.log(result3);
-        if(result3.query_error){
-            return {output: null, error: result3.query_error.message};
-        }
-        else if (!result3.query_output.length){
-            return {output: null, error: 'an address does not exist for the given house number and postal code'};
-        }
-        else{
-            let address_obj = result3.query_output[0];
-            address_obj.postal_area = postal_area[0];
-            return {output: address_obj, error: null};
-        }
+        let postal_code = result1.query_output[0].postal_code;
+        let result2 = await Model.select('postal_areas', 'name', 'code = ?', postal_code);
+
+        let address_obj = result1.query_output[0];
+        address_obj.postal_area = result2.query_output[0].name;
+        return {output: address_obj, error: null};
+    }
+}
+
+async function get_address_by_details(input){
+    // input = {number: 121\B, postal_area: moratuwa,10400}
+    let postal_area = input.postal_area.split(',');    //split into an array [moratuwa, 10400]
+    // let conditions = Object.getOwnPropertyNames(input);
+    // let params = Object.values(input);
+    let result = await Model.select('addresses', '*', 'number = ? AND postal_code = ?', [input.number, postal_area[1]]);
+    console.log(result);
+    if(result.query_error){
+        return {output: null, error: result.query_error.message};
+    }
+    else if (!result.query_output.length){
+        return {output: null, error: 'an address does not exist for the given house number and postal code'};
+    }
+    else{
+        let address_obj = result.query_output[0];
+        address_obj.postal_area = postal_area[0];
+        return {output: address_obj, error: null};
     }
 }
 
@@ -176,7 +175,8 @@ async function change_address(address_obj){
 
 module.exports = { 
     get_addresses_by_area,
-    get_address,
+    get_address_by_id,
+    get_address_by_details,
     insert_address,
     change_address
 };

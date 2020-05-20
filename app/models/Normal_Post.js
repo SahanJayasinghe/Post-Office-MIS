@@ -1,4 +1,6 @@
 const Model = require('../../core/Model');
+const Address = require('./Address');
+const helper = require('../../core/helper');
 
 async function create_normal_post(delivery_address_id, price){
     let result1 = await Model.select('normal_posts', '*', 'address_id = ?', delivery_address_id);
@@ -51,15 +53,25 @@ async function cancel_delivery(delivery_address_id){
 }
 
 async function get_normal_posts(address_id){
-    let result = await Model.select('normal_posts', '*', 'address_id = ?', address_id);
-    if (result.query_error){
-        return {output: null, error: result.query_error.message};
+    let np_result = await Model.select('normal_posts', '*', 'address_id = ?', address_id);
+    if (np_result.query_error){
+        return {output: null, error: np_result.query_error.message};
     }
-    else if (!result.query_output.length){
-        return {output: 'No normal post letters received for this address', error: null};
+    else if (!np_result.query_output.length){
+        return {output: null, error: 'No normal post letters received for this address'};
     }
     else{
-        return {output: result.query_output[0], error: null};
+        let address_result = await Address.get_address_by_id(address_id);
+        console.log(address_result);
+        if(address_result.error){
+            return address_result;
+        }
+
+        let address_arr = helper.get_address_array(address_result.output);
+        let np_obj = np_result.query_output[0];
+        np_obj.address = address_arr;
+
+        return {output: np_obj, error: null};
     }
 }
 

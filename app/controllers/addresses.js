@@ -9,7 +9,7 @@ router.get('/:id', async (req, res) => {
         // let sql = 'SELECT * FROM contacts WHERE id = ?';
         let id = req.params.id;
         // select_contacts(id);
-        let result = await Address.get_address(id);
+        let result = await Address.get_address_by_id(id);
         console.log(result);
 
         if(result.error){

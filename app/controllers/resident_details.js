@@ -13,7 +13,7 @@ router.post('/', async (req, res) => {
         let key = req.body.key.slice(0,3) + req.body.key.slice(-3);
         console.log(key);
 
-        let address_result = await Address.get_address(address_id);
+        let address_result = await Address.get_address_by_id(address_id);
         
         if(address_result.error){
             res.status(400).send('Invalid key provided. Could not find an address.');
