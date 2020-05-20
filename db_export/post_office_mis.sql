@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 08, 2020 at 04:22 AM
+-- Generation Time: May 20, 2020 at 04:24 PM
 -- Server version: 10.1.38-MariaDB
 -- PHP Version: 7.3.2
 
@@ -26,11 +26,23 @@ DELIMITER $$
 --
 -- Procedures
 --
+CREATE DEFINER=`root`@`localhost` PROCEDURE `active_parcels_received` (IN `in_code` VARCHAR(5), IN `in_status` ENUM('on-route-receiver','receiver-unavailable'))  NO SQL
+SELECT detailed_parcels.id, receiver_id, receiver_name, number AS receiver_number, street AS receiver_street, sub_area AS receiver_sub_area, postal_code AS receiver_code, current_area, current_code, last_update, posted_location, delivery_attempts FROM detailed_parcels, addresses WHERE addresses.id = receiver_id AND addresses.postal_code = in_code AND status = in_status ORDER BY last_update DESC$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `active_parcels_sent` (IN `in_code` VARCHAR(5), IN `in_status` ENUM('on-route-receiver','receiver-unavailable'))  NO SQL
+SELECT detailed_parcels.id, receiver_id, receiver_name, addresses.number AS receiver_number, addresses.street AS receiver_street, addresses.sub_area AS receiver_sub_area, addresses.postal_code AS receiver_code, current_area, current_code, last_update, posted_datetime, delivery_attempts FROM detailed_parcels, addresses WHERE addresses.id = receiver_id AND posted_location = in_code AND status = in_status ORDER BY last_update DESC$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `active_reg_posts_received` (IN `in_code` VARCHAR(5), IN `in_status` ENUM('on-route-receiver','receiver-unavailable','on-route-sender','sender-unavailable'))  NO SQL
 SELECT detailed_reg_posts.id, receiver_id, receiver_name, sender_id, sender_name, speed_post, current_area, current_code, last_update, delivery_attempts_receiver, delivery_attempts_sender, delivered_datetime FROM `detailed_reg_posts`, `addresses` WHERE status=in_status AND addresses.id = receiver_id AND addresses.postal_code=in_code ORDER BY speed_post DESC, last_update DESC$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `active_reg_posts_sent` (IN `in_code` VARCHAR(5), IN `in_status` ENUM('on-route-receiver','receiver-unavailable','on-route-sender','sender-unavailable'))  NO SQL
 SELECT detailed_reg_posts.id, sender_id, sender_name, receiver_id, receiver_name, speed_post, current_area, current_code, last_update, delivery_attempts_receiver, delivery_attempts_sender, delivered_datetime FROM `detailed_reg_posts`, `addresses` WHERE status=in_status AND addresses.id = sender_id AND addresses.postal_code=in_code ORDER BY speed_post DESC, last_update DESC$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `completed_parcels_received` (IN `in_code` VARCHAR(5), IN `in_status` ENUM('delivered','failed'))  NO SQL
+SELECT parcels.id, receiver_id, receiver_name, number AS receiver_number, street AS receiver_street, sub_area AS receiver_sub_area, postal_code AS receiver_code, last_update, posted_location, delivery_attempts, delivered_datetime FROM parcels, addresses WHERE receiver_id = addresses.id AND addresses.postal_code = in_code AND status = in_status AND last_update BETWEEN DATE_SUB(CURDATE(), INTERVAL 90 DAY) AND CURDATE() ORDER BY last_update DESC$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `completed_parcels_sent` (IN `in_code` VARCHAR(5), IN `in_status` ENUM('delivered','failed'))  NO SQL
+SELECT parcels.id, receiver_id, receiver_name, number AS receiver_number, street AS receiver_street, sub_area AS receiver_sub_area, postal_code AS receiver_code, last_update, posted_datetime, delivery_attempts, delivered_datetime FROM parcels, addresses WHERE posted_location = in_code AND status = in_status AND receiver_id = addresses.id AND last_update BETWEEN DATE_SUB(CURDATE(), INTERVAL 90 DAY) AND CURDATE() ORDER BY last_update DESC$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `completed_reg_posts_received` (IN `in_code` VARCHAR(5), IN `in_status` ENUM('delivered','sent-back','failed'))  NO SQL
 SELECT detailed_reg_posts.id, receiver_id, receiver_name, sender_id, sender_name, speed_post, current_area, current_code, last_update, delivery_attempts_receiver, delivery_attempts_sender, delivered_datetime FROM `detailed_reg_posts`, `addresses` WHERE status=in_status AND last_update BETWEEN DATE_SUB(CURDATE(), INTERVAL 90 DAY) AND CURDATE() AND addresses.id = receiver_id AND addresses.postal_code=in_code ORDER BY last_update DESC$$
@@ -89,7 +101,7 @@ CREATE TABLE `admins` (
 --
 
 INSERT INTO `admins` (`id`, `username`, `password`) VALUES
-(1, 'john123', '$2b$10$aWncIasvHa0lZTU7Oysqte11k47NfvMYLymSoAnpeLes6EJ4BoQfS');
+(1, 'john123', '$2b$10$EV1HGqx0GKlaAFNxQdzy/uU8WNB1soh3QJYaH5Mfx4wTzQBCshaYO');
 
 -- --------------------------------------------------------
 
@@ -104,6 +116,29 @@ CREATE TABLE `detailed_addresses` (
 ,`sub_area` varchar(50)
 ,`postal_area` varchar(20)
 ,`postal_code` varchar(5)
+);
+
+-- --------------------------------------------------------
+
+--
+-- Stand-in structure for view `detailed_parcels`
+-- (See below for the actual view)
+--
+CREATE TABLE `detailed_parcels` (
+`id` int(11)
+,`receiver_id` int(11)
+,`receiver_name` varchar(50)
+,`payment` decimal(6,2)
+,`description` varchar(1024)
+,`status` enum('on-route-receiver','receiver-unavailable','delivered','failed')
+,`current_area` varchar(20)
+,`current_code` varchar(5)
+,`last_update` datetime
+,`posted_location` varchar(5)
+,`posted_datetime` datetime
+,`reached_receiver_po` datetime
+,`delivery_attempts` int(11)
+,`delivered_datetime` datetime
 );
 
 -- --------------------------------------------------------
@@ -149,9 +184,69 @@ CREATE TABLE `normal_posts` (
 --
 
 INSERT INTO `normal_posts` (`address_id`, `on_route_count`, `delivered_count`, `failed_delivery_count`, `total_price`) VALUES
-(1, 18, 0, 0, '29.37'),
+(1, 20, 0, 0, '59.37'),
 (2, 3, 0, 0, '0.00'),
-(3, 4, 0, 0, '0.00');
+(3, 4, 0, 0, '0.00'),
+(5, 1, 0, 0, '0.00');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `parcels`
+--
+
+CREATE TABLE `parcels` (
+  `id` int(11) NOT NULL,
+  `receiver_id` int(11) NOT NULL,
+  `receiver_name` varchar(50) NOT NULL,
+  `payment` decimal(6,2) NOT NULL,
+  `description` varchar(1024) DEFAULT NULL,
+  `status` enum('on-route-receiver','receiver-unavailable','delivered','failed') NOT NULL,
+  `current_location` varchar(5) NOT NULL,
+  `last_update` datetime NOT NULL,
+  `posted_location` varchar(5) NOT NULL,
+  `posted_datetime` datetime NOT NULL,
+  `reached_receiver_po` datetime DEFAULT NULL,
+  `delivery_attempts` int(11) NOT NULL DEFAULT '0',
+  `delivered_datetime` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+--
+-- Dumping data for table `parcels`
+--
+
+INSERT INTO `parcels` (`id`, `receiver_id`, `receiver_name`, `payment`, `description`, `status`, `current_location`, `last_update`, `posted_location`, `posted_datetime`, `reached_receiver_po`, `delivery_attempts`, `delivered_datetime`) VALUES
+(1, 2, 'John W.', '170.00', NULL, 'delivered', '10400', '2020-05-12 09:10:00', '01000', '2020-05-09 07:25:13', '2020-05-11 14:23:44', 1, '2020-05-12 09:10:00'),
+(2, 4, 'Alice', '96.20', NULL, 'on-route-receiver', '80300', '2020-05-12 12:39:21', '10400', '2020-05-09 07:32:11', NULL, 0, NULL),
+(3, 7, 'Clark', '40.00', NULL, 'failed', '10400', '2020-05-13 17:12:24', '10400', '2020-05-10 08:58:40', '2020-05-10 08:58:40', 3, NULL),
+(4, 9, 'Abeyratna', '225.50', NULL, 'receiver-unavailable', '81000', '2020-05-16 06:55:00', '01000', '2020-05-13 17:08:34', '2020-05-15 12:21:46', 1, NULL),
+(5, 10, 'William', '384.15', 'e-bay order', 'on-route-receiver', '80000', '2020-05-17 14:06:13', '82000', '2020-05-15 07:26:00', NULL, 0, NULL),
+(6, 2, 'Sam W.', '95.00', NULL, 'on-route-receiver', '10400', '2020-05-17 14:08:53', '12100', '2020-05-15 13:17:34', '2020-05-17 14:08:53', 0, NULL),
+(7, 11, 'Mr. Bates', '205.00', 'FRAGILE !!!', 'on-route-receiver', '90000', '2020-05-19 08:16:51', '90000', '2020-05-19 08:16:51', NULL, 0, NULL);
+
+--
+-- Triggers `parcels`
+--
+DELIMITER $$
+CREATE TRIGGER `insert_reached_receiver_po` BEFORE INSERT ON `parcels` FOR EACH ROW BEGIN
+	DECLARE receiver_po VARCHAR(5);
+    SELECT postal_code INTO @receiver_po FROM detailed_addresses 		WHERE id=NEW.receiver_id;
+    IF @receiver_po=NEW.posted_location THEN
+    	SET NEW.reached_receiver_po = NEW.posted_datetime;
+    END IF;
+END
+$$
+DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `set_reached_receiver_po` BEFORE UPDATE ON `parcels` FOR EACH ROW BEGIN
+	DECLARE receiver_po VARCHAR(5);
+    SELECT postal_code INTO @receiver_po FROM detailed_addresses 		WHERE id=NEW.receiver_id;
+    IF @receiver_po=NEW.current_location AND OLD.reached_receiver_po is NULL THEN
+    	SET NEW.reached_receiver_po = NEW.last_update;
+    END IF;
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -161,30 +256,31 @@ INSERT INTO `normal_posts` (`address_id`, `on_route_count`, `delivered_count`, `
 
 CREATE TABLE `postal_areas` (
   `code` varchar(5) NOT NULL,
-  `name` varchar(20) NOT NULL
+  `name` varchar(20) NOT NULL,
+  `password` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 --
 -- Dumping data for table `postal_areas`
 --
 
-INSERT INTO `postal_areas` (`code`, `name`) VALUES
-('01000', 'maradana'),
-('10400', 'moratuwa'),
-('11000', 'gampaha'),
-('11160', 'kal-eliya'),
-('12000', 'kalutara'),
-('12100', 'matugama'),
-('20400', 'peradeniya'),
-('20800', 'katugastota'),
-('22200', 'nuwara-eliya'),
-('40000', 'jaffna'),
-('70600', 'eheliyagoda'),
-('80000', 'galle'),
-('80300', 'ambalangoda'),
-('81000', 'matara'),
-('82000', 'hambantota'),
-('90000', 'badulla');
+INSERT INTO `postal_areas` (`code`, `name`, `password`) VALUES
+('01000', 'maradana', '$2b$10$jGIITzcjRWCOGwjsPKEsruLYG2tGYDGCK9ejTklDlPIxCKxQl32uS'),
+('10400', 'moratuwa', '$2b$10$.YIOLgPm2.M98wvc4GIsi.e/.dQtblU6LGn2qluFKLjz6JBqBKZcW'),
+('11000', 'gampaha', NULL),
+('11160', 'kal-eliya', NULL),
+('12000', 'kalutara', NULL),
+('12100', 'matugama', NULL),
+('20400', 'peradeniya', NULL),
+('20800', 'katugastota', NULL),
+('22200', 'nuwara-eliya', NULL),
+('40000', 'jaffna', NULL),
+('70600', 'eheliyagoda', NULL),
+('80000', 'galle', NULL),
+('80300', 'ambalangoda', NULL),
+('81000', 'matara', NULL),
+('82000', 'hambantota', NULL),
+('90000', 'badulla', NULL);
 
 -- --------------------------------------------------------
 
@@ -232,7 +328,8 @@ INSERT INTO `registered_posts` (`id`, `sender_id`, `sender_name`, `receiver_id`,
 (16, 6, 'Drupal', 2, 'Sam W.', '267.00', 0, 'receiver-unavailable', '10400', '2020-05-02 06:39:22', '2020-05-06 13:25:39', 1, 0, NULL),
 (17, 9, 'Weerakkody', 2, 'Dean W.', '324.50', 1, 'on-route-receiver', '80000', '2020-05-05 06:11:54', '2020-05-06 10:21:00', 0, 0, NULL),
 (18, 2, 'John W.', 5, 'Peiris', '93.50', 0, 'on-route-receiver', '01000', '2020-05-06 11:50:37', '2020-05-06 19:45:05', 0, 0, NULL),
-(19, 1, 'Kamal Perera', 7, 'Silva', '106.50', 0, 'on-route-receiver', '11000', '2020-05-06 16:40:30', '2020-05-07 07:53:22', 0, 0, NULL);
+(19, 1, 'Kamal Perera', 7, 'Silva', '106.50', 0, 'on-route-receiver', '11000', '2020-05-06 16:40:30', '2020-05-07 07:53:22', 0, 0, NULL),
+(20, 3, 'Sarath', 11, 'Edison', '244.90', 1, 'on-route-receiver', '20400', '2020-05-08 23:39:51', '2020-05-08 23:39:51', 0, 0, NULL);
 
 --
 -- Triggers `registered_posts`
@@ -320,6 +417,15 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 -- --------------------------------------------------------
 
 --
+-- Structure for view `detailed_parcels`
+--
+DROP TABLE IF EXISTS `detailed_parcels`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `detailed_parcels`  AS  select `parcels`.`id` AS `id`,`parcels`.`receiver_id` AS `receiver_id`,`parcels`.`receiver_name` AS `receiver_name`,`parcels`.`payment` AS `payment`,`parcels`.`description` AS `description`,`parcels`.`status` AS `status`,`postal_areas`.`name` AS `current_area`,`parcels`.`current_location` AS `current_code`,`parcels`.`last_update` AS `last_update`,`parcels`.`posted_location` AS `posted_location`,`parcels`.`posted_datetime` AS `posted_datetime`,`parcels`.`reached_receiver_po` AS `reached_receiver_po`,`parcels`.`delivery_attempts` AS `delivery_attempts`,`parcels`.`delivered_datetime` AS `delivered_datetime` from (`parcels` join `postal_areas` on((`parcels`.`current_location` = `postal_areas`.`code`))) ;
+
+-- --------------------------------------------------------
+
+--
 -- Structure for view `detailed_reg_posts`
 --
 DROP TABLE IF EXISTS `detailed_reg_posts`;
@@ -369,6 +475,15 @@ ALTER TABLE `normal_posts`
   ADD PRIMARY KEY (`address_id`);
 
 --
+-- Indexes for table `parcels`
+--
+ALTER TABLE `parcels`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `receiver_id` (`receiver_id`),
+  ADD KEY `current_location` (`current_location`),
+  ADD KEY `posted_location` (`posted_location`);
+
+--
 -- Indexes for table `postal_areas`
 --
 ALTER TABLE `postal_areas`
@@ -400,10 +515,16 @@ ALTER TABLE `admins`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
+-- AUTO_INCREMENT for table `parcels`
+--
+ALTER TABLE `parcels`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+
+--
 -- AUTO_INCREMENT for table `registered_posts`
 --
 ALTER TABLE `registered_posts`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- Constraints for dumped tables
@@ -420,6 +541,14 @@ ALTER TABLE `addresses`
 --
 ALTER TABLE `normal_posts`
   ADD CONSTRAINT `normal_posts_ibfk_1` FOREIGN KEY (`address_id`) REFERENCES `addresses` (`id`);
+
+--
+-- Constraints for table `parcels`
+--
+ALTER TABLE `parcels`
+  ADD CONSTRAINT `parcels_ibfk_1` FOREIGN KEY (`receiver_id`) REFERENCES `addresses` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `parcels_ibfk_2` FOREIGN KEY (`current_location`) REFERENCES `postal_areas` (`code`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `parcels_ibfk_3` FOREIGN KEY (`posted_location`) REFERENCES `postal_areas` (`code`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Constraints for table `registered_posts`
