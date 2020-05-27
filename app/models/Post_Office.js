@@ -13,6 +13,9 @@ async function login(code, password){
     else if(!result.query_output.length){
         return {output: null, error: 'Invalid postal code'};
     }
+    else if(result.query_output[0].password == null){
+        return {output: null, error: 'No Account Found'};
+    }
     else{
         const match = await bcrpyt.compare(password, result.query_output[0].password);
         if(!match){

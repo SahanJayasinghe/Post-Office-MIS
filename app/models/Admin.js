@@ -16,7 +16,8 @@ async function login(username, password){
             return {output: null, error: 'Invalid password'};
         }
         else{
-            return {output: `${result.query_output[0].id}`, error: null};
+            let admin_obj = {id: result.query_output[0].id, username}
+            return {output: admin_obj, error: null};
         }
     }
 }

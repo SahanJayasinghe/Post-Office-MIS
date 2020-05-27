@@ -17,8 +17,13 @@ router.post('/login', async (req, res)=> {
             let pattern = /^\d{5}$/;
             code_check = pattern.test(req.body.code);
         }
+        let pw_check = false;
+        if(req.body.hasOwnProperty('password')){
+            let pw_length = req.body.password.length;
+            pw_check = pw_length > 0 && pw_length < 21;
+        }
 
-        if(key_check && (body_length == 2) && code_check){
+        if(key_check && (body_length == 2) && code_check && pw_check){
             let result = await Post_Office.login(req.body.code, req.body.password);
             console.log(result);
             if(result.error){
@@ -46,6 +51,7 @@ router.post('/login', async (req, res)=> {
     } 
     catch (err) {
         console.log('promise reject: ' + err.query_error);
+        console.log(err);
         res.status(500).send('Server could not perform the action');
     }
 });
@@ -56,19 +62,11 @@ router.put('/', async (req, res) => {
         console.log(req.body);
         let body_length = Object.keys(req.body).length;
         let key_check = (req.body.hasOwnProperty('code') && req.body.hasOwnProperty('password'));
+        let code_check = (req.body.hasOwnProperty('code') && /^\d{5}$/.test(req.body.code));
         
-        let code_check = false;
-        if(req.body.hasOwnProperty('code')){
-            let pattern = /^\d{5}$/;
-            code_check = pattern.test(req.body.code);
-        }
-
         // for any special char: ^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[^a-zA-Z0-9])(?!.*\s).{6,20}$
-        let pw_check = false;
-        if(req.body.hasOwnProperty('password')){
-            let pattern = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*#?&^_+\-=])[A-Za-z\d@$!%*#?&^_+\-=]{6,20}$/;
-            pw_check = pattern.test(req.body.password);
-        }
+        let pattern = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*#?&^_+\-=])[A-Za-z\d@$!%*#?&^_+\-=]{6,20}$/;
+        let pw_check = req.body.hasOwnProperty('password') && pattern.test(req.body.password);
 
         if(key_check && (body_length == 2) && code_check && pw_check){
             let result = await Postal_Area.create_postal_account(req.body.code, req.body.password);
@@ -76,7 +74,7 @@ router.put('/', async (req, res) => {
                 res.status(400).send(result.error);
             }
             else{
-                res.status(200).send(result.output);
+                res.status(200).send(`Postal account created for the post office ${req.body.code}`);
             }
         }
         else{

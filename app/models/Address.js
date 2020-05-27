@@ -41,28 +41,25 @@ async function get_address_by_details(input){
 
 async function insert_address(address){
     let code = address.postal_area.split(',')[1];
-    let result1 = await Model.select('postal_areas', '*', 'code = ?', code);
-    // console.log(result1);
-    if (!result1.query_output.length){
-        return {output: null, error: "Invalid postal area"};
+    let pa_result = await Model.select('postal_areas', '*', 'code = ?', code);
+    console.log(pa_result);
+    if (!pa_result.query_output.length){
+        return {output: null, error: "Given postal area does not exist"};
     }
-    else if(result1.query_error){
-        return {output: null, error: result1.query_error.message};
+    else if(pa_result.query_error){
+        return {output: null, error: pa_result.query_error.message};
     }
-    // let postal_code = result1.query_output[0].code;
-    console.log(result1.query_output);
-    // console.log(postal_code);
 
-    let result2 = await Model.select('addresses', 'id', 'number = ? AND postal_code = ?', [address.number, code]);
-    console.log(result2);
-    if (result2.query_output.length){
+    let address_result = await Model.select('addresses', 'id', 'number = ? AND postal_code = ?', [address.number, code]);
+    console.log(address_result);
+    if (address_result.query_output.length){
         return{
             output: null, 
             error: `house number ${address.number} already exists in the postal area ${address.postal_area}`
         };
     }
-    else if (result2.query_error){
-        return {output: null, error: result2.query_error.message};
+    else if (address_result.query_error){
+        return {output: null, error: address_result.query_error.message};
     }
 
     let rand_str = '';
@@ -71,46 +68,63 @@ async function insert_address(address){
         let x = Math.floor(Math.random() * characters.length);
         rand_str += characters.charAt(x);
     }
-
+    console.log(rand_str);
     // let timestamp = `${new Date().getTime()}`;
     // console.log(`timestamp_id: ${timestamp}`);
     // let time_str = timestamp.slice(0,4) + '-' + timestamp.slice(4,8) + '-' + timestamp.slice(8); 
     // address.id = `${postal_code}-${rand_str}-${time_str}`;
+    
+    let address_str = `${address.number}`;
     address.resident_key = rand_str; 
     delete address.postal_area;
     address.postal_code = code;
+    (address.street.trim() === '') ? delete address.street : address_str+=`, ${address.street}`;
+    (address.sub_area.trim() === '') ? delete address.sub_area : address_str+=`, ${address.sub_area}`;
+    address_str += `, ${pa_result.query_output[0].name}, ${code}`;
 
-    let result3 = await Model.insert('addresses', address);
-    if(result3.query_error){
-        return {output: null, error: result3.query_error.message};
+    let insert_result = await Model.insert('addresses', address);
+    console.log(insert_result);
+    if(insert_result.query_error){
+        return {output: null, error: insert_result.query_error.message};
     }
-    else{
-        return {output: result3.query_output, error: null};
+    else{        
+        let key = rand_str.slice(0,3) + `${insert_result.query_output.insertId}` + rand_str.slice(3);
+        // let key = rand_str.slice(0,3) + `12` + rand_str.slice(3);
+        return {output: {address: address_str, resident_key: key}, error: null};
     }    
 }
 
 async function get_addresses_by_area(postal_area){
     // input parameter looks like Moratuwa,10400
     let code = postal_area.split(',')[1];
-    let result1 = await Model.select('postal_areas', '*', 'code = ?', code);
+    let pa_result = await Model.select('postal_areas', '*', 'code = ?', code);
 
-    if (!result1.query_output.length){
+    if (!pa_result.query_output.length){
         return {output: null, error: "Invalid postal area"};
     }
-    else if(result1.query_error){
-        return {output: null, error: result1.query_error.message};
+    else if(pa_result.query_error){
+        return {output: null, error: pa_result.query_error.message};
     }
 
-    let result2 = await Model.select('addresses', '*', 'postal_code = ?', code);
-    if (result2.query_error){
-        return {output: null, error: result2.query_error.message};
+    let address_result = await Model.select('addresses', '*', 'postal_code = ?', code);
+    if (address_result.query_error){
+        return {output: null, error: address_result.query_error.message};
     }
-    return {output: result2.query_output, error: null};
+    let output_arr = [];
+    for (const ad_obj of address_result.query_output) {
+        let ad_arr = [ad_obj.id, ad_obj.number];
+        (ad_obj.street) ? ad_arr.push(ad_obj.street) : ad_arr.push('_');
+        (ad_obj.sub_area) ? ad_arr.push(ad_obj.sub_area) : ad_arr.push('_');
+        let key = ad_obj.resident_key.slice(0,3) + `${ad_obj.id}` + ad_obj.resident_key.slice(3);
+        ad_arr.push(key);
+        output_arr.push(ad_arr);
+    }
+    return {output: output_arr, error: null};
 }
 
 async function change_address(address_obj){
     let address_result = await Model.select('addresses', '*', 'id = ?', address_obj.id);
-    
+    console.log(address_result);
     if(!address_result.query_output.length){
         return {output: null, error: 'No existing address for the given id'};
     }
@@ -119,6 +133,15 @@ async function change_address(address_obj){
     }
     
     let code = address_obj.postal_area.split(',')[1];       // postal_area: Moratuwa,10400
+    let pa_result = await Model.select('postal_areas', '*', 'code = ?', code);
+    console.log(pa_result);
+    if (!pa_result.query_output.length){
+        return {output: null, error: "Given postal area does not exist"};
+    }
+    else if(pa_result.query_error){
+        return {output: null, error: pa_result.query_error.message};
+    }
+
     let old_address = address_result.query_output[0];
 
     if(old_address.number != address_obj.number || old_address.postal_code != code){
@@ -134,7 +157,9 @@ async function change_address(address_obj){
         }
     }
 
-    // let prev_id = address_result.query_output[0].id;
+    if(address_obj.street.trim() === '') {address_obj.street = null}
+    if(address_obj.sub_area.trim() === '') {address_obj.sub_area = null}
+    console.log(address_obj);
     
     let update_fields = [];
     let params = [];
@@ -160,6 +185,7 @@ async function change_address(address_obj){
         params.push(code);
     }
     
+    console.log(params);
     if(!update_fields.length){
         return {output: null, error: 'Updated attributes are same as the existing ones'};
     }
