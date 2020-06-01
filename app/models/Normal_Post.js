@@ -43,13 +43,33 @@ async function deliver_normal_post(delivery_address_id){
     return {output: update_result.query_output, error: null};
 }
 
-async function cancel_delivery(delivery_address_id){
+async function cancel_delivery(address_id, post_office){
+    let address_result = await Model.select('addresses', 'postal_code', 'id = ?', address_id);
+    if ( !address_result.query_output.length ) {
+        return {output: null, error: 'No address by the given id'};
+    }
+    else if (address_result.query_output[0].postal_code !== post_office) {
+        return {output: null, error: `Only the Receiver's Post Office can discard the letter`}
+    }
+
+    let np_result = await Model.select('normal_posts', 'on_route_count, failed_delivery_count', 'address_id = ?', address_id);
+    if ( !np_result.query_output.length){
+        return {output: null, error: `There are no normal posts to this address`};
+    }
+    else if(np_result.query_output[0].on_route_count === 0){
+        return {output: null, error: `There are no normal posts to this address`};
+    }
+    
     let update_str = 'on_route_count = on_route_count - 1, failed_delivery_count = failed_delivery_count + 1';
-    let update_result = await Model.update('normal_posts', update_str, 'address_id = ?', delivery_address_id);
+    let update_result = await Model.update('normal_posts', update_str, 'address_id = ?', address_id);
+    console.log(update_result);
     if(update_result.query_error){
         return {output: null, error: update_result.query_error.message};
     }
-    return {output: update_result.query_output, error: null};
+    let output = {};
+    output.on_route_count = np_result.query_output[0].on_route_count - 1;
+    output.failed_delivery_count = np_result.query_output[0].failed_delivery_count + 1;
+    return {output, error: null};
 }
 
 async function get_normal_posts(address_id){
@@ -58,6 +78,9 @@ async function get_normal_posts(address_id){
         return {output: null, error: np_result.query_error.message};
     }
     else if (!np_result.query_output.length){
+        return {output: null, error: 'No normal post letters received for this address'};
+    }
+    else if (np_result.query_output[0].on_route_count === 0){
         return {output: null, error: 'No normal post letters received for this address'};
     }
     else{
@@ -75,9 +98,23 @@ async function get_normal_posts(address_id){
     }
 }
 
+async function get_resident_normal_posts(resident_id){
+    let np_result = await Model.select('normal_posts', '*', 'address_id = ?', resident_id);
+    if (np_result.query_error){
+        return {output: null, error: np_result.query_error.message};
+    }
+    else if(!np_result.query_output.length){
+        return {output: {on_route: 0, delivered: 0, failed: 0}, error: null};
+    }
+    let {on_route_count, delivered_count, failed_delivery_count} = np_result.query_output[0];
+    let np_obj = {on_route: on_route_count, delivered: delivered_count, failed: failed_delivery_count};
+    return {output: np_obj, erro: null};
+}
+
 module.exports = {
     create_normal_post,
     deliver_normal_post,
     cancel_delivery,
-    get_normal_posts
+    get_normal_posts,
+    get_resident_normal_posts
 }

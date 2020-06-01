@@ -19,7 +19,7 @@ router.post('/login', async (req, res)=> {
         }
         let pw_check = false;
         if(req.body.hasOwnProperty('password')){
-            let pw_length = req.body.password.length;
+            let pw_length = req.body.password.trim().length;
             pw_check = pw_length > 0 && pw_length < 21;
         }
 
@@ -50,7 +50,7 @@ router.post('/login', async (req, res)=> {
         }
     } 
     catch (err) {
-        console.log('promise reject: ' + err.query_error);
+        console.log('Route handler catch block');
         console.log(err);
         res.status(500).send('Server could not perform the action');
     }
@@ -86,7 +86,8 @@ router.put('/', async (req, res) => {
         }
     } 
     catch (err) {
-        console.log('promise reject: ' + err.query_error);
+        console.log('Route handler catch block');
+        console.log(err);
         res.status(500).send('Server could not perform the action');
     }
 });
@@ -96,11 +97,13 @@ router.post('/reg-posts/:category', auth_post_office, async (req, res) => {
         // req.body contains post office code and status type
         console.log(req.body);
         console.log(req.post_office);
+        let code_check = (req.body.hasOwnProperty('post_office') && /^\d{5}$/.test(req.body.post_office));
         let param_check = (['received', 'sent'].includes(req.params.category))
-        status_arr = ['on-route-receiver', 'receiver-unavailable', 'delivered', 
+        let status_arr = ['on-route-receiver', 'receiver-unavailable', 'delivered', 
             'on-route-sender', 'sender-unavailable', 'sent-back', 'failed'];
+        let status_check = req.body.hasOwnProperty('status') && status_arr.includes(req.body.status);
 
-        if (param_check && status_arr.includes(req.body.status)){
+        if (code_check && param_check && status_check){
             let result = await Post_Office.get_reg_posts_by_status(req.body.post_office, req.params.category, req.body.status);
             if(result.error){
                 res.status(400).send(result.error);
@@ -117,7 +120,8 @@ router.post('/reg-posts/:category', auth_post_office, async (req, res) => {
         }
     } 
     catch (err) {
-        console.log('promise reject: ' + err.query_error);
+        console.log('Route handler catch block');
+        console.log(err);
         res.status(500).send('Server could not perform the action');
     }
 });
@@ -127,10 +131,12 @@ router.post('/parcels/:category', async (req, res) => {
         // req.body contains post office code and status type 
         console.log(req.body);
         console.log(req.params);
+        let code_check = (req.body.hasOwnProperty('post_office') && /^\d{5}$/.test(req.body.post_office));
         let param_check = (['received', 'sent'].includes(req.params.category))
-        status_arr = ['on-route-receiver', 'receiver-unavailable', 'delivered', 'failed'];         
-
-        if (param_check && status_arr.includes(req.body.status)){
+        let status_arr = ['on-route-receiver', 'receiver-unavailable', 'delivered', 'failed'];         
+        let status_check = req.body.hasOwnProperty('status') && status_arr.includes(req.body.status);
+        
+        if (code_check && param_check && status_check){
             let result = await Post_Office.get_parcels_by_status(req.body.post_office, req.params.category, req.body.status);
             if(result.error){
                 res.status(400).send(result.error);
@@ -147,7 +153,8 @@ router.post('/parcels/:category', async (req, res) => {
         }      
     } 
     catch (err) {
-        console.log('promise reject: ' + err.query_error);
+        console.log('Route handler catch block');
+        console.log(err);
         res.status(500).send('Server could not perform the action');
     }
 });
@@ -174,7 +181,8 @@ router.post('/reg-posts/all-received', async (req, res) => {
         }
     } 
     catch (err) {
-        console.log('promise reject: ' + err.query_error);
+        console.log('Route handler catch block');
+        console.log(err);
         res.status(500).send('Server could not perform the action');
     }
 });

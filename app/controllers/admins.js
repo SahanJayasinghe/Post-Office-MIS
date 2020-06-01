@@ -9,7 +9,7 @@ router.post('/login', async (req, res) => {
         let body_length = Object.keys(req.body).length;
         let key_check = (req.body.hasOwnProperty('username') && req.body.hasOwnProperty('password'));
         let pw_length = 0;
-        if (key_check) {pw_length = req.body.password.length;}
+        if (key_check) {pw_length = req.body.password.trim().length;}
 
         if(body_length == 2 && key_check && pw_length > 0 && pw_length < 21){
             let result = await Admin.login(req.body.username, req.body.password);
@@ -33,7 +33,7 @@ router.post('/login', async (req, res) => {
         }
     } 
     catch (err) {
-        console.log('promise reject: ' + err.query_error);
+        console.log('Route handler catch block');
         console.log(err);
         res.status(500).send('Server could not perform the action');
     }    

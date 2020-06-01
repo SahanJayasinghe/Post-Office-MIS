@@ -18,8 +18,9 @@ async function create_parcel_post(receiver, payment, descript, post_office){
         posted_location: post_office,
         posted_datetime: dt_str
     }
-    if(descript != ''){
-        insert_obj.description = descript;
+    let description = descript.trim();
+    if(description !== ''){
+        insert_obj.description = description;
     }
     console.log(insert_obj);
     let insert_result = await Model.insert('parcels', insert_obj);
@@ -57,6 +58,40 @@ async function update_location(parcel_id, post_office){
             return {output: null, error: update_result.query_error.message};
         }
         return {output: {last_location: post_office, last_update: dt_str}, error: null};
+    }
+}
+
+async function discard_parcel(parcel_id, post_office){
+    let columns = 'current_location, status, delivery_attempts';
+    let parcel_result = await Model.select('parcels', columns, 'id = ?', parcel_id);
+    if(parcel_result.query_error){
+        return {output: null, error: parcel_result.query_error.message};
+    }
+    else if(!parcel_result.query_output.length){
+        return {output: null, error: 'Parcel id does not exist'};
+    }
+    
+    let {status, current_location, delivery_attempts} = parcel_result.query_output[0];
+    if (status === 'receiver-unavailable' && delivery_attempts > 0 && current_location === post_office){
+        let dt_str = helper.current_dt_str();    
+        let update_str = 'status = ?, last_update = ?';
+        let params = ['failed', dt_str, parcel_id];
+        let update_result = await Model.update('parcels', update_str, 'id = ?', params);
+        console.log(update_result);
+        if(update_result.query_error){
+            return {output: null, error: update_result.query_error.message};
+        }
+        return {output: {status: 'failed', last_update: dt_str}, error: null};
+    }
+    else{
+        let msg = '';
+        if(status !== 'receiver-unavailable'){
+            msg += 'Not allowed to discard this parcel. ';
+        }
+        if (post_office !== current_location){
+            msg += `Only the Post Office ${current_location} has the authority to discard this parcel.`;
+        }
+        return {output: null, error: msg}
     }
 }
 
@@ -129,8 +164,62 @@ async function get_parcel(parcel_id){
     return {output: parcel_obj, error: null};
 }
 
+async function get_resident_parcels_by_status(resident_id, status){
+    // status = 'delivering' | 'delivered' | 'failed'
+    let proc_result;
+    (status == 'delivering') 
+        ? proc_result = await Model.call_procedure('resident_active_parcels', resident_id)
+        : proc_result = await Model.call_procedure('resident_completed_parcels', [resident_id, status]);
+    
+    if(proc_result.query_error){
+        return {output: null, error: proc_result.query_error.message};
+    }
+
+    let result = {};
+    let result_arr = [];
+
+    console.log(proc_result.query_output[0]);
+    parcels = proc_result.query_output[0];
+
+    for (const parcel of parcels) {
+        let parcel_arr = [parcel.id, parcel.receiver_name];
+        (parcel.description) ? parcel_arr.push(parcel.description) : parcel_arr.push('_');
+
+        if (status == 'delivering'){
+            let pa_result = await Model.select('postal_areas', 'name', 'code = ?', parcel.current_location);
+            if(pa_result.query_error){
+                result.error = pa_result.query_error;
+                return;
+            }
+            else{
+                parcel_arr.push(`${pa_result.query_output[0].name}, ${parcel.current_location}`);
+                parcel_arr.push(helper.dt_local(parcel.last_update));
+            }
+        }
+
+        if(status == 'delivered'){
+            parcel_arr.push(helper.dt_local(parcel.delivered_datetime));
+        }
+        if(status == 'failed'){
+            parcel_arr.push(helper.dt_local(parcel.last_update));
+        }
+
+        parcel_arr.push(parcel.delivery_attempts);
+        let posted_at_arr = [`${parcel.posted_area_name}, ${parcel.posted_area_code}`, helper.dt_local(parcel.posted_datetime)]
+        parcel_arr.push(posted_at_arr);
+        // parcel_arr.push(helper.dt_local(parcel.posted_datetime));
+
+        result_arr.push(parcel_arr);
+    }
+    result.output = result_arr;
+    console.log(result);
+    return result;
+}
+
 module.exports = {
     create_parcel_post,
     update_location,
-    get_parcel
+    discard_parcel,
+    get_parcel,
+    get_resident_parcels_by_status
 }

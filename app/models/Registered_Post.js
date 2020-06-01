@@ -88,16 +88,41 @@ async function deliver_to_receiver(reg_post_id, post_office, status){
     return {output: update_result.query_output, error: null};
 }
 
-async function send_back(reg_post_id){
-    let dt_str = helper.current_dt_str();
-    
-    let update_str = 'status = ?, last_update = ?';
-    let params = ['on-route-sender', dt_str, reg_post_id];
-    let update_result = await Model.update('registered_posts', update_str, 'id = ?', params);
-    if(update_result.query_error){
-        return {output: null, error: update_result.query_error.message};
+async function send_back(reg_post_id, post_office){
+    let columns = 'current_location, status, delivery_attempts_receiver';
+    let regpost_result = await Model.select('registered_posts', columns, 'id = ?', reg_post_id);
+    console.log(regpost_result);
+    if(regpost_result.query_error){
+        return {output: null, error: regpost_result.query_error.message};
     }
-    return {output: update_result.query_output, error: null};
+    else if(!regpost_result.query_output.length){
+        return {output: null, error: 'Registered Post id does not exist'};
+    }
+
+    let {current_location, status} = regpost_result.query_output[0];
+    let attempts_rec = regpost_result.query_output[0].delivery_attempts_receiver;    
+    
+    if(status === 'receiver-unavailable' && attempts_rec > 0 && current_location === post_office){
+        let dt_str = helper.current_dt_str();    
+        let update_str = 'status = ?, last_update = ?';
+        let params = ['on-route-sender', dt_str, reg_post_id];
+        let update_result = await Model.update('registered_posts', update_str, 'id = ?', params);
+        console.log(update_result);
+        if(update_result.query_error){
+            return {output: null, error: update_result.query_error.message};
+        }
+        return {output: {status: 'on-route-sender', last_update: dt_str}, error: null};
+    }
+    else{
+        let msg = '';
+        if(status !== 'receiver-unavailable'){
+            msg += 'Not allowed to return this registered post. ';
+        }
+        if (post_office !== current_location){
+            msg += `Only the Post Office ${current_location} has the authority to return this post.`;
+        }
+        return {output: null, error: msg}
+    }    
 }
 
 async function deliver_to_sender(reg_post_id, post_office, status){
@@ -120,6 +145,43 @@ async function deliver_to_sender(reg_post_id, post_office, status){
         return {output: null, error: update_result.query_error.message};
     }
     return {output: update_result.query_output, error: null};
+}
+
+async function discard_reg_post(reg_post_id, post_office){
+    let columns = 'current_location, status, delivery_attempts_sender';
+    let regpost_result = await Model.select('registered_posts', columns, 'id = ?', reg_post_id);
+    console.log(regpost_result);
+    if(regpost_result.query_error){
+        return {output: null, error: regpost_result.query_error.message};
+    }
+    else if(!regpost_result.query_output.length){
+        return {output: null, error: 'Registered Post id does not exist'};
+    }
+
+    let {current_location, status} = regpost_result.query_output[0];
+    let attempts_sen = regpost_result.query_output[0].delivery_attempts_sender;
+
+    if(status === 'sender-unavailable' && attempts_sen > 0 && current_location === post_office){
+        let dt_str = helper.current_dt_str();    
+        let update_str = 'status = ?, last_update = ?';
+        let params = ['failed', dt_str, reg_post_id];
+        let update_result = await Model.update('registered_posts', update_str, 'id = ?', params);
+        console.log(update_result);
+        if(update_result.query_error){
+            return {output: null, error: update_result.query_error.message};
+        }
+        return {output: {status: 'failed', last_update: dt_str}, error: null};
+    }
+    else{
+        let msg = '';
+        if(status !== 'sender-unavailable'){
+            msg += 'Not allowed to discard this registered post. ';
+        }
+        if (post_office !== current_location){
+            msg += `Only the Post Office ${current_location} has the authority to discard this post.`;
+        }
+        return {output: null, error: msg}
+    }
 }
 
 async function get_reg_post(reg_post_id){
@@ -208,13 +270,88 @@ async function get_sender_reg_posts(sender_id){
     }
 }
 
+async function get_resident_reg_posts_by_status(resident_id, sent_or_received, status){
+    // status can be 'delivering', 'returning', 'delivered', 'sent-back', 'failed'
+    let status_arr = ['delivering', 'returning'];
+    let params = [resident_id, status];
+    let proc_result;
+    
+    if(status_arr.includes(status)){
+        proc_result = await Model.call_procedure(`resident_active_reg_posts_${sent_or_received}`, params);
+    }
+    else{
+        proc_result = await Model.call_procedure(`resident_completed_reg_posts_${sent_or_received}`, params);
+    }
+    
+    if(proc_result.query_error){
+        return {output: null, error: proc_result.query_error.message};
+    }
+    let result = {};
+    let result_arr = [];
+
+    console.log(proc_result.query_output[0]);
+    reg_posts = proc_result.query_output[0];
+
+    for (const reg_post of reg_posts) {
+        let rp_arr = [];
+        rp_arr.push(reg_post.id);
+        rp_arr.push(`${reg_post.speed_post}`);
+
+        if(sent_or_received == 'received'){
+            let sender_address_str = helper.get_address_str(reg_post);
+            rp_arr.push([reg_post.sender_name, sender_address_str]); 
+            rp_arr.push(reg_post.receiver_name);
+        }
+        else{
+            rp_arr.push(reg_post.sender_name);
+            let receiver_address_str = helper.get_address_str(reg_post);
+            rp_arr.push([reg_post.receiver_name, receiver_address_str]);
+        }
+
+        if(status_arr.includes(status)){
+            let pa_result = await Model.select('postal_areas', 'name', 'code = ?', reg_post.current_location);
+            if(pa_result.query_error){
+                result.error = pa_result.query_error;
+                return;
+            }
+            else{                
+                rp_arr.push(`${pa_result.query_output[0].name}, ${reg_post.current_location}`);
+                rp_arr.push(helper.dt_local(reg_post.last_update));
+            }
+        }
+
+        if(status == 'failed'){
+            rp_arr.push(helper.dt_local(reg_post.last_update));
+        }
+
+        if(['delivered', 'sent-back'].includes(status)){
+            rp_arr.push(helper.dt_local(reg_post.delivered_datetime));
+        }
+
+        rp_arr.push(reg_post.delivery_attempts_receiver);
+
+        if(['returning', 'sent-back', 'failed'].includes(status)){
+            rp_arr.push(reg_post.delivery_attempts_sender);
+        }
+
+        rp_arr.push(helper.dt_local(reg_post.posted_datetime));
+
+        result_arr.push(rp_arr);
+    }
+    result.output = result_arr;
+    console.log(result);
+    return result;
+}
+
 module.exports = {
     create_reg_post,
     update_location,
     deliver_to_receiver,
     send_back,
     deliver_to_sender,
+    discard_reg_post,
     get_reg_post,
     get_receiver_reg_posts,
-    get_sender_reg_posts
+    get_sender_reg_posts,
+    get_resident_reg_posts_by_status
 }

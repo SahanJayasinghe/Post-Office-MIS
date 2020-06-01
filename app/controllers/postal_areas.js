@@ -15,7 +15,8 @@ router.get('/', async (req, res) => {
         }
     }
     catch (err) {
-        console.log('promise reject: ' + err.query_error);
+        console.log('Route handler catch block');
+        console.log(err);
         res.status(500).send('Server could not perform the action');
     }
 });
@@ -33,7 +34,8 @@ router.get('/no-account', async (req, res) => {
         }
     }
     catch (err) {
-        console.log('promise reject: ' + err.query_error);
+        console.log('Route handler catch block');
+        console.log(err);
         res.status(500).send('Server could not perform the action');
     }
 });
@@ -51,7 +53,8 @@ router.get('/with-account', async (req, res) => {
         }
     }
     catch (err) {
-        console.log('promise reject: ' + err.query_error);
+        console.log('Route handler catch block');
+        console.log(err);
         res.status(500).send('Server could not perform the action');
     }
 });
@@ -80,7 +83,8 @@ router.post('/', async (req, res) => {
         }
     } 
     catch (err) {
-        console.log('promise reject: ' + err.query_error);
+        console.log('Route handler catch block');
+        console.log(err);
         res.status(500).send('Server could not perform the action');
     }
 });
@@ -105,7 +109,8 @@ router.post('/province', async (req, res) => {
         }
     } 
     catch (err) {
-        console.log('promise reject: ' + err.query_error);
+        console.log('Route handler catch block');
+        console.log(err);
         res.status(500).send('Server could not perform the action');
     }
 });
@@ -134,7 +139,8 @@ router.put('/', async(req, res) => {
         }
     } 
     catch (err) {
-        console.log('promise reject: ' + err.query_error);
+        console.log('Route handler catch block');
+        console.log(err);
         res.status(500).send('Server could not perform the action');
     }
 });
@@ -164,7 +170,8 @@ router.post('/account', async (req, res) => {
         }
     } 
     catch (err) {
-        console.log('promise reject: ' + err.query_error);
+        console.log('Route handler catch block');
+        console.log(err);
         res.status(500).send('Server could not perform the action');
     }
 });

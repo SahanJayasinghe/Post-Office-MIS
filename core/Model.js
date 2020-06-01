@@ -57,14 +57,14 @@ function remove(table, condition, params){
     // DB.connect();
     let sql = `DELETE FROM ${table} WHERE ${condition}`;
     console.log(sql);
-    return this.db_ins.query(sql, params);
+    return DB.query(sql, params);
 }
 
 function call_procedure(proc_name, params){
     // params is a string or an array
     let temp = [];
     let temp_str = '?';
-    if(typeof params != 'string'){
+    if (! ['string', 'number'].includes(typeof params)) {
         params.forEach(element => {
             temp.push('?');
         });

@@ -199,10 +199,25 @@ async function change_address(address_obj){
     return {output: update_result.query_output, error: null};
 }
 
+async function get_resident_key(address_id){
+    let result = await Model.select('addresses', 'resident_key', 'id = ?', address_id);
+    console.log(result);
+    if (result.query_error){
+        return {output: null, error: result.query_error};
+    }
+    else if (!result.query_output.length){
+        return {output: null, error: `Address does not exist.`};
+    }
+    else{
+        return {output: result.query_output[0].resident_key, error: null};
+    }
+}
+
 module.exports = { 
     get_addresses_by_area,
     get_address_by_id,
     get_address_by_details,
     insert_address,
-    change_address
+    change_address,
+    get_resident_key
 };

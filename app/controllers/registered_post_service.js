@@ -52,7 +52,8 @@ router.post('/address', async (req, res) => {
         }
     } 
     catch (err) {
-        console.log('promise reject: ' + err.query_error);
+        console.log('Route handler catch block');
+        console.log(err);
         res.status(500).send('Server could not perform the action');
     }
 });
@@ -90,42 +91,134 @@ router.post('/', async (req, res) => {
         }
     }
     catch (err) {
-        console.log('promise reject: ' + err.query_error);
-        res.status(500).send('Server could not perform the action');
-    }
-});
-
-router.put('/:id', async (req, res) => {
-    try {
-        let result = await Registered_Post.send_back(req.params.id);
-        console.log(result);
-        if(result.error){
-            res.status(400).send(result.error);
-        }
-        else{
-            res.status(200).send(result.output);
-        }
-    }
-    catch (err) {
-        console.log('promise reject: ' + err.query_error);
+        console.log('Route handler catch block');
+        console.log(err);
         res.status(500).send('Server could not perform the action');
     }
 });
 
 router.get('/:id', async (req, res) => {
     try {
-        console.log(typeof req.params.id);
+        console.log(req.params.id);
+        let id_check = /^\d+$/.test(req.params.id);
+        if( !id_check) {
+            return res.status(400).send('Invalid id');
+        }
+
         let result = await Registered_Post.get_reg_post(req.params.id);
         console.log(result);
         if(result.error){
-            res.status(400).send(result.error);
+            return res.status(400).send(result.error);
+        }
+        let status = helper.format_status(result.output.status);
+        console.log(status);
+        console.log(typeof result.output.speed_post);
+        let response_obj = {
+            receiver: result.output.receiver,
+            sender: result.output.sender,
+            speed_post: (result.output.speed_post === 1) ? true: false,
+            status: [result.output.status, status],
+            posted_on: result.output.posted_dt,
+            last_location: result.output.current_location,
+            last_update: result.output.last_update,
+            attempts_receiver: result.output.attempts_rec,
+            attempts_sender: result.output.attempts_sen
+        };
+        res.status(200).send(response_obj);
+    } 
+    catch (err) {
+        console.log('Route handler catch block');
+        console.log(err);
+        res.status(500).send('Server could not perform the action');
+    }
+});
+
+router.put('/location-update', async (req, res) => {
+    try {
+        // body contains {id: '12', post_office: '10400'}
+        // post office code can be extracted from the token.
+        console.log(req.body);
+        let body_length = Object.keys(req.body).length;
+        let id_check = req.body.hasOwnProperty('id') && /^\d+$/.test(req.body.id);
+        let code_check = req.body.hasOwnProperty('post_office') && /^\d{5}$/.test(req.body.post_office);
+
+        if((body_length == 2) && id_check && code_check){
+            let result = await Registered_Post.update_location(req.body.id, req.body.post_office);
+            console.log(result);
+            if(result.error){
+                res.status(400).send(result.error);
+            }
+            else{
+                res.status(200).send(result.output);
+            }
         }
         else{
-            res.status(200).send(result.output);
+            res.status(400).send('Invalid details provided');
         }
     } 
     catch (err) {
-        console.log('promise reject: ' + err.query_error);
+        console.log('Route handler catch block');
+        console.log(err);
+        res.status(500).send('Server could not perform the action');
+    }
+});
+
+router.put('/send-back', async (req, res) => {
+    try {
+        // body contains {id: 17, post_office: '10400'}
+        console.log(req.body);
+        let body_length = Object.keys(req.body).length;
+        let id_check = req.body.hasOwnProperty('id') && /^\d+$/.test(req.body.id);
+        let code_check = req.body.hasOwnProperty('post_office') && /^\d{5}$/.test(req.body.post_office);
+
+        if((body_length == 2) && id_check && code_check){
+            let result = await Registered_Post.send_back(req.body.id, req.body.post_office);
+            console.log(result);
+            if(result.error){
+                res.status(400).send(result.error);
+            }
+            else{
+                let status_arr = [result.output.status, helper.format_status(result.output.status)];
+                res.status(200).send({status: status_arr, last_update: result.output.last_update});
+            }
+        }
+        else{
+            res.status(400).send('Invalid details provided');
+        }
+    }
+    catch (err) {
+        console.log('Route handler catch block');
+        console.log(err);
+        res.status(500).send('Server could not perform the action');
+    }
+});
+
+router.put('/discard', async (req, res) => {
+    try {
+        //body contains address_id and post_office
+        console.log(req.body);
+        let body_length = Object.keys(req.body).length;
+        let id_check = req.body.hasOwnProperty('id') && /^\d+$/.test(req.body.id);
+        let code_check = req.body.hasOwnProperty('post_office') && /^\d{5}$/.test(req.body.post_office);
+
+        if(body_length === 2 && id_check && code_check){
+            let result = await Registered_Post.discard_reg_post(req.body.id, req.body.post_office);
+            console.log(result);
+            if(result.error){
+                res.status(400).send(result.error);
+            }
+            else{
+                let status_arr = [result.output.status, helper.format_status(result.output.status)];
+                res.status(200).send({status: status_arr, last_update: result.output.last_update});
+            }
+        }
+        else{
+            res.status(400).send('Invalid details provided');
+        }
+    } 
+    catch (err) {
+        console.log('Route handler catch block');
+        console.log(err);
         res.status(500).send('Server could not perform the action');
     }
 });

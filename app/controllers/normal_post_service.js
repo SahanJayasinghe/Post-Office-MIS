@@ -17,19 +17,7 @@ router.post('/address', async (req, res) => {
             }
             else{
                 let address_arr = [result.output.id];
-                address_arr = address_arr.concat(helper.get_address_array(result.output)); 
-                // let {id, number, street, sub_area, postal_area, postal_code} = result.output;
-                // // let address_obj = {id, number, street, sub_area, postal_area, postal_code};
-                // let address_arr = [id, number];
-                // if(street != null){
-                //     address_arr.push(street);
-                // }
-                // if(sub_area != null){
-                //     address_arr.push(sub_area);
-                // }
-                // address_arr.push(postal_area);
-                // address_arr.push(postal_code);
-
+                address_arr = address_arr.concat(helper.get_address_array(result.output));
                 res.status(200).send(address_arr);
             }
         }
@@ -38,7 +26,8 @@ router.post('/address', async (req, res) => {
         }       
     } 
     catch (err) {
-        console.log('promise reject: ' + err.query_error);
+        console.log('Route handler catch block');
+        console.log(err);
         res.status(500).send('Server could not perform the action'); 
     }
 });
@@ -47,10 +36,72 @@ router.put('/', async (req, res) => {
     try {
         // id: 2, price: 16.50
         console.log(req.body);
-        let price_check = helper.validate_currency(req.body.price);
-        if(price_check && (parseFloat(req.body.price) <= 1000)){
-            let price = parseFloat(req.body.price);
-            let result = await Normal_Post.create_normal_post(req.body.id, price);
+        let body_length = Object.keys(req.body).length;
+        let id_check = req.body.hasOwnProperty('id') && /^\d+$/.test(req.body.id);
+        
+        if (body_length === 2 && id_check && req.body.hasOwnProperty('price')){
+            let price_check = helper.validate_currency(req.body.price);
+            if(price_check && (parseFloat(req.body.price) <= 1000)){
+                let price = parseFloat(req.body.price);
+                let result = await Normal_Post.create_normal_post(req.body.id, price);
+                console.log(result);
+                if(result.error){
+                    res.status(400).send(result.error);
+                }
+                else{
+                    res.status(200).send(result.output);
+                }
+            }
+            else{
+                res.status(400).send('Invalid letter price');
+            }
+        }
+        else{
+            res.status(400).send('Invalid details provided');
+        }
+    } 
+    catch (err) {
+        console.log('Route handler catch block');
+        console.log(err);
+        res.status(500).send('Server could not perform the action');
+    }
+});
+
+router.get('/:id', async (req, res) => {
+    try {
+        console.log(req.params.id);
+        let id_check = /^\d+$/.test(req.params.id);
+        if( !id_check) {
+            return res.status(400).send('Invalid id');
+        }
+
+        let result = await Normal_Post.get_normal_posts(req.params.id);
+        console.log(result);
+        if(result.error){
+            return res.status(400).send(result.error);
+        }
+        delete result.output.address_id; 
+        delete result.output.total_price;
+        res.status(200).send(result.output);
+    } 
+    catch (err) {
+        console.log('Route handler catch block');
+        console.log(err);
+        res.status(500).send('Server could not perform the action');
+    }
+});
+
+router.put('/discard', async (req, res) => {
+    try {
+        //body contains address_id and post_office
+        console.log(req.body);
+        let body_length = Object.keys(req.body).length;
+        let id_check = req.body.hasOwnProperty('id') && /^\d+$/.test(req.body.id);
+        let code_check = req.body.hasOwnProperty('post_office') && /^\d{5}$/.test(req.body.post_office);
+
+        if(body_length === 2 && id_check && code_check){
+            let result = await Normal_Post.cancel_delivery(req.body.id, req.body.post_office);
+            console.log(result);
             if(result.error){
                 res.status(400).send(result.error);
             }
@@ -59,11 +110,12 @@ router.put('/', async (req, res) => {
             }
         }
         else{
-            res.status(400).send('Invalid letter price');
+            res.status(400).send('Invalid details provided');
         }
     } 
     catch (err) {
-        console.log('promise reject: ' + err.query_error);
+        console.log('Route handler catch block');
+        console.log(err);
         res.status(500).send('Server could not perform the action');
     }
 });

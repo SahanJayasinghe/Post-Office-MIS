@@ -100,6 +100,15 @@ function validate_address(address){
     return number_check && street_check && sub_area_check && code_check;
 }
 
+function validate_resident_key(input){
+    let resident_key_check = false;
+    if(input.hasOwnProperty('resident_key')){
+        let resident_key_length = input.resident_key.trim().length;
+        resident_key_check = (resident_key_length > 0) && (resident_key_length < 21);
+    }
+    return resident_key_check;
+}
+
 module.exports = {
     current_dt_str,
     dt_local,
@@ -109,5 +118,6 @@ module.exports = {
     validate_currency,
     validate_id_name,
     validate_number_postal_area,
-    validate_address
+    validate_address,
+    validate_resident_key
 }

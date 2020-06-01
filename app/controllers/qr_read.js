@@ -76,7 +76,8 @@ router.post('/post-details', async (req, res) => {
         }
     } 
     catch (err) {
-        console.log('promise reject: ' + err.query_error);
+        console.log('Route handler catch block');
+        console.log(err);
         res.status(500).send('Server could not perform the action');
     }
 });
@@ -114,7 +115,8 @@ router.put('/', async (req, res) => {
         }        
     } 
     catch (err) {
-        console.log('promise reject: ' + err.query_error);
+        console.log('Route handler catch block');
+        console.log(err);
         res.status(500).send('Server could not perform the action');
     }
 });
