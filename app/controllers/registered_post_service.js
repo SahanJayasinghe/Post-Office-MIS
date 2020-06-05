@@ -3,8 +3,9 @@ const router = express.Router();
 const Address = require('../models/Address');
 const Registered_Post = require('../models/Registered_Post');
 const helper = require('../../core/helper');
+const auth_post_office = require('../../middleware/auth_post_office');
 
-router.post('/address', async (req, res) => {
+router.post('/address', auth_post_office, async (req, res) => {
     try {
         //req.body contains {receiver, sender}
         // receiver = {number: 46, postal_area: kal-eliya,11160}
@@ -58,7 +59,7 @@ router.post('/address', async (req, res) => {
     }
 });
 
-router.post('/', async (req, res) => {
+router.post('/', auth_post_office, async (req, res) => {
     try {
         // req.body contains 
         // sender = {id: 2, name: abc}
@@ -97,7 +98,7 @@ router.post('/', async (req, res) => {
     }
 });
 
-router.get('/:id', async (req, res) => {
+router.get('/:id', auth_post_office, async (req, res) => {
     try {
         console.log(req.params.id);
         let id_check = /^\d+$/.test(req.params.id);
@@ -133,7 +134,7 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-router.put('/location-update', async (req, res) => {
+router.put('/location-update', auth_post_office, async (req, res) => {
     try {
         // body contains {id: '12', post_office: '10400'}
         // post office code can be extracted from the token.
@@ -163,7 +164,7 @@ router.put('/location-update', async (req, res) => {
     }
 });
 
-router.put('/send-back', async (req, res) => {
+router.put('/send-back', auth_post_office, async (req, res) => {
     try {
         // body contains {id: 17, post_office: '10400'}
         console.log(req.body);
@@ -193,7 +194,7 @@ router.put('/send-back', async (req, res) => {
     }
 });
 
-router.put('/discard', async (req, res) => {
+router.put('/discard', auth_post_office, async (req, res) => {
     try {
         //body contains address_id and post_office
         console.log(req.body);

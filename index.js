@@ -12,6 +12,7 @@ const admins = require('./app/controllers/admins');
 const postal_areas = require('./app/controllers/postal_areas');
 const post_offices  = require('./app/controllers/post_offices');
 const parcel_post_service = require('./app/controllers/parcel_post_service');
+const money_order_service = require('./app/controllers/money_order_service');
 
 const app = express();
 
@@ -57,6 +58,7 @@ app.use('/admins', admins);
 app.use('/postal-areas', postal_areas);
 app.use('/post-offices', post_offices);
 app.use('/parcel-post', parcel_post_service );
+app.use('/money-order', money_order_service);
 
 const port = process.env.PORT || 5000;
 app.listen(port, () => {

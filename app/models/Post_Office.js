@@ -209,9 +209,56 @@ async function get_parcels_by_status(post_office, sent_or_received, status){
     }
 }
 
+async function get_money_orders_by_status(post_office, sent_or_received, status){
+    let status_arr = ['delivered', 'returned']; 
+    let proc_result;
+
+    if(status_arr.includes(status)){
+        let params = [post_office, status];
+        proc_result = await Model.call_procedure(`completed_money_orders_${sent_or_received}`, params);
+    }
+    else{
+        proc_result = await Model.call_procedure(`active_money_orders_${sent_or_received}`, post_office);
+    }
+
+    if(proc_result.query_error){
+        return {output: null, error: proc_result.query_error.message};
+    }
+
+    console.log(proc_result.query_output[0]);
+    let money_orders = proc_result.query_output[0];
+    let result_arr = [];
+    let result = {};
+
+    for (const mo_obj of money_orders) {
+        let mo_arr = [mo_obj.id, mo_obj.sender_name, mo_obj.receiver_name];
+        mo_arr.push(parseFloat(mo_obj.amount).toFixed(2));
+        
+        if(status_arr.includes(status)) {
+            mo_arr.push(helper.dt_local(mo_obj.delivered_datetime));
+        }
+        else{
+            let expire = helper.expiration_check(mo_obj.posted_datetime, mo_obj.expire_after);
+            mo_arr.push(expire[1]);
+        }
+
+        (sent_or_received === 'received') 
+        ? mo_arr.push(`${mo_obj.posted_area}, ${mo_obj.posted_code}`)
+        : mo_arr.push(`${mo_obj.receiver_area}, ${mo_obj.receiver_code}`);
+        
+        mo_arr.push(helper.dt_local(mo_obj.posted_datetime));
+
+        result_arr.push(mo_arr);
+    }
+    result.output = result_arr;
+    console.log(result);
+    return result;
+}
+
 module.exports = {
     login,
     get_reg_posts_by_status,
     get_parcels_by_status,
+    get_money_orders_by_status,
     get_reg_posts
 }

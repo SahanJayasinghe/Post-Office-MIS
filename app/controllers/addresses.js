@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Address = require('../models/Address');
 const helper = require('../../core/helper');
+const auth_admin = require('../../middleware/auth_admin');
 // console.log(Address);
 
 router.get('/:id', async (req, res) => {
@@ -36,7 +37,7 @@ router.get('/:id', async (req, res) => {
     //     })    
 });
 
-router.post('/', async (req, res) => {
+router.post('/', auth_admin, async (req, res) => {
     try{
         // body contains {number: '121/B', street: 'Temple Rd.', sub_area: 'Rawathawatta', postal_area: 'moratuwa,10400'}
         console.log(req.body);
@@ -64,7 +65,7 @@ router.post('/', async (req, res) => {
     }    
 });
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', auth_admin, async (req, res) => {
     try{
         // body contains number, street, sub_area, postal_area
         console.log(req.body);
@@ -95,7 +96,7 @@ router.put('/:id', async (req, res) => {
     }  
 });
 
-router.post('/area', async (req, res) => {
+router.post('/area', auth_admin, async (req, res) => {
     try {
         // body contains {postal_area: moratuwa,10400}
         console.log(req.body);

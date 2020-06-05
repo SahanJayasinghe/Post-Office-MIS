@@ -88,9 +88,9 @@ async function insert_address(address){
         return {output: null, error: insert_result.query_error.message};
     }
     else{        
-        let key = rand_str.slice(0,3) + `${insert_result.query_output.insertId}` + rand_str.slice(3);
+        // let key = rand_str.slice(0,3) + `${insert_result.query_output.insertId}` + rand_str.slice(3);
         // let key = rand_str.slice(0,3) + `12` + rand_str.slice(3);
-        return {output: {address: address_str, resident_key: key}, error: null};
+        return {output: {address: address_str, resident_key: rand_str}, error: null};
     }    
 }
 
@@ -115,8 +115,8 @@ async function get_addresses_by_area(postal_area){
         let ad_arr = [ad_obj.id, ad_obj.number];
         (ad_obj.street) ? ad_arr.push(ad_obj.street) : ad_arr.push('_');
         (ad_obj.sub_area) ? ad_arr.push(ad_obj.sub_area) : ad_arr.push('_');
-        let key = ad_obj.resident_key.slice(0,3) + `${ad_obj.id}` + ad_obj.resident_key.slice(3);
-        ad_arr.push(key);
+        // let key = ad_obj.resident_key.slice(0,3) + `${ad_obj.id}` + ad_obj.resident_key.slice(3);
+        ad_arr.push(ad_obj.resident_key);
         output_arr.push(ad_arr);
     }
     return {output: output_arr, error: null};

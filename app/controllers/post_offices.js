@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const auth_post_office = require('../../middleware/auth_post_office');
 const jwt = require('jsonwebtoken');
 const Post_Office = require('../models/Post_Office');
 const Postal_Area = require('../models/Postal_Area');
+const auth_post_office = require('../../middleware/auth_post_office');
+const auth_admin = require('../../middleware/auth_admin');
 
 router.post('/login', async (req, res)=> {
     try {
@@ -56,7 +57,7 @@ router.post('/login', async (req, res)=> {
     }
 });
 
-router.put('/', async (req, res) => {
+router.put('/', auth_admin, async (req, res) => {
     try {
         // body contains postal code and password
         console.log(req.body);
@@ -98,7 +99,7 @@ router.post('/reg-posts/:category', auth_post_office, async (req, res) => {
         console.log(req.body);
         console.log(req.post_office);
         let code_check = (req.body.hasOwnProperty('post_office') && /^\d{5}$/.test(req.body.post_office));
-        let param_check = (['received', 'sent'].includes(req.params.category))
+        let param_check = (['received', 'sent'].includes(req.params.category));
         let status_arr = ['on-route-receiver', 'receiver-unavailable', 'delivered', 
             'on-route-sender', 'sender-unavailable', 'sent-back', 'failed'];
         let status_check = req.body.hasOwnProperty('status') && status_arr.includes(req.body.status);
@@ -126,13 +127,13 @@ router.post('/reg-posts/:category', auth_post_office, async (req, res) => {
     }
 });
 
-router.post('/parcels/:category', async (req, res) => {
+router.post('/parcels/:category', auth_post_office, async (req, res) => {
     try {
         // req.body contains post office code and status type 
         console.log(req.body);
         console.log(req.params);
         let code_check = (req.body.hasOwnProperty('post_office') && /^\d{5}$/.test(req.body.post_office));
-        let param_check = (['received', 'sent'].includes(req.params.category))
+        let param_check = (['received', 'sent'].includes(req.params.category));
         let status_arr = ['on-route-receiver', 'receiver-unavailable', 'delivered', 'failed'];         
         let status_check = req.body.hasOwnProperty('status') && status_arr.includes(req.body.status);
         
@@ -151,6 +152,37 @@ router.post('/parcels/:category', async (req, res) => {
         else{
             res.status(400).send('Invalid request parameters');
         }      
+    } 
+    catch (err) {
+        console.log('Route handler catch block');
+        console.log(err);
+        res.status(500).send('Server could not perform the action');
+    }
+});
+
+router.post('/money-orders/:category', auth_post_office, async (req, res) => {
+    try {
+        // req.body contains post office code and status type 
+        console.log(req.body);
+        console.log(req.params);
+        let code_check = (req.body.hasOwnProperty('post_office') && /^\d{5}$/.test(req.body.post_office));
+        let param_check = (['received', 'sent'].includes(req.params.category));
+        let status_arr = ['created', 'delivered', 'returned'];
+        let status_check = req.body.hasOwnProperty('status') && status_arr.includes(req.body.status);
+
+        if (code_check && param_check && status_check) {
+            let {post_office, status} = req.body;
+            let result = await Post_Office.get_money_orders_by_status(post_office, req.params.category, status);
+            if(result.error){
+                res.status(400).send(result.error);
+            }
+            else{
+                res.status(200).send(result.output);
+            }
+        }
+        else{
+            res.status(400).send('Invalid request parameters');
+        }
     } 
     catch (err) {
         console.log('Route handler catch block');

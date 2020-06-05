@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Postal_Area = require('../models/Postal_Area');
+const auth_admin = require('../../middleware/auth_admin');
 
 router.get('/', async (req, res) => {
     try {
@@ -59,7 +60,7 @@ router.get('/with-account', async (req, res) => {
     }
 });
 
-router.post('/', async (req, res) => {
+router.post('/', auth_admin, async (req, res) => {
     try {
         // req.body contains postal area name and code
         // ex: {code: '10400', name: 'Moratuwa'}
@@ -89,7 +90,7 @@ router.post('/', async (req, res) => {
     }
 });
 
-router.post('/province', async (req, res) => {
+router.post('/province', auth_admin, async (req, res) => {
     try {
         // body contains {province: '1'}  digit of 1-9
         console.log(req.body);
@@ -115,7 +116,7 @@ router.post('/province', async (req, res) => {
     }
 });
 
-router.put('/', async(req, res) => {
+router.put('/', auth_admin, async(req, res) => {
     try {
         // body contains {code, name, prev_code}
         console.log(req.body);

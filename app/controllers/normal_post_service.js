@@ -3,8 +3,9 @@ const router = express.Router();
 const Address = require('../models/Address');
 const Normal_Post = require('../models/Normal_Post');
 const helper = require('../../core/helper');
+const auth_post_office = require('../../middleware/auth_post_office');
 
-router.post('/address', async (req, res) => {
+router.post('/address', auth_post_office, async (req, res) => {
     try {
         // body contains house number & postal area ex: {number:46, postal_area: Moratuwa,10400}
         console.log(req.body);
@@ -32,7 +33,7 @@ router.post('/address', async (req, res) => {
     }
 });
 
-router.put('/', async (req, res) => {
+router.put('/', auth_post_office, async (req, res) => {
     try {
         // id: 2, price: 16.50
         console.log(req.body);
@@ -67,7 +68,7 @@ router.put('/', async (req, res) => {
     }
 });
 
-router.get('/:id', async (req, res) => {
+router.get('/:id', auth_post_office, async (req, res) => {
     try {
         console.log(req.params.id);
         let id_check = /^\d+$/.test(req.params.id);
@@ -91,7 +92,7 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-router.put('/discard', async (req, res) => {
+router.put('/discard', auth_post_office, async (req, res) => {
     try {
         //body contains address_id and post_office
         console.log(req.body);

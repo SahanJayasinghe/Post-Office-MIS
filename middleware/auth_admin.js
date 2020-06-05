@@ -1,16 +1,15 @@
 const jwt = require('jsonwebtoken');
 
-function auth_post_office(req, res, next) {
+function auth_admin(req, res, next) {
     console.log('authorizing...');
     const token = req.header('x-auth-token');
     if(!token) return res.status(401).send('Access denied. No token provided');
 
     try {
         const decoded = jwt.verify(token, 'SecretKey');
-        console.log(decoded);
-        if (decoded.user_type == 'post_office'){
+        if (decoded.user_type === 'admin'){
             console.log('authorization successfull.');
-            req.post_office = decoded.user_id;
+            req.admin = decoded.user_id;
             next();
         }
         else{
@@ -22,4 +21,4 @@ function auth_post_office(req, res, next) {
     }
 }
 
-module.exports = auth_post_office;
+module.exports = auth_admin;

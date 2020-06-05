@@ -14,6 +14,13 @@ function current_dt_str(){
     return dt_str;
 }
 
+function get_dt_str(dt_obj){
+    let date = dt_obj.toLocaleDateString().split('/');
+    let time = dt_obj.toTimeString().split(' ');
+    let dt_str = `${date[2]}-${date[0]}-${date[1]} ${time[0]}`;
+    return dt_str;
+}
+
 function get_address_array(address_obj, name = null){
     let address_arr = [];
     (name) && address_arr.push(name);
@@ -109,9 +116,55 @@ function validate_resident_key(input){
     return resident_key_check;
 }
 
+function validate_money_order(body){
+    let body_length = Object.keys(body).length;
+    let sen_name_check = body.hasOwnProperty('sender_name') && /^(?=.*[A-Za-z])[A-Za-z\-,.\s]{1,50}$/.test(body.sender_name);
+    let rec_name_check = body.hasOwnProperty('receiver_name') && /^(?=.*[A-Za-z])[A-Za-z\-,.\s]{1,50}$/.test(body.receiver_name);
+    let code_check = body.hasOwnProperty('receiver_postal_code') && /^\d{5}$/.test(body.receiver_postal_code);
+    let amount_check = validate_currency(body.amount) && parseFloat(body.amount) <= 5000;
+    let price_check = validate_currency(body.price);
+    let expire_check = body.hasOwnProperty('expire_after') && /^\d{1,2}$/.test(body.expire_after);
+    expire_check =  expire_check && parseInt(body.expire_after) > 0 && parseInt(body.expire_after) < 25;
+    let po_check = body.hasOwnProperty('posted_location') && /^\d{5}$/.test(body.posted_location);
+
+    let is_valid = (body_length === 7) && sen_name_check && rec_name_check && code_check;
+    is_valid = is_valid && amount_check && price_check && po_check && expire_check;
+    return is_valid;
+}
+
+function validate_datetime(date, time){
+    // date format = 2020-06-02     time format = 02:07 (24 hour)
+    let date_check = /^([12]\d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01]))$/.test(date);
+    let time_check = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/.test(time);
+    if(!date_check || !time_check){
+        return [false, 'Invalid date time format'];
+    }
+    let dt_str = `${date} ${time}`;
+    let timestamp = (new Date(dt_str)).getTime();
+    console.log(timestamp);
+    if (!timestamp) {
+        return [false, 'Inavlid date'];
+    }
+    let dt_now = new Date();
+    if (dt_now.getTime() < timestamp) {
+        return [false, 'Future Date Time values are not allowed'];
+    }
+    return [true];
+}
+
+function expiration_check(posted_dt_iso, expire_after){
+    let now = new Date();
+    let posted_dt = dt_local(posted_dt_iso);
+    let expired_dt = new Date(posted_dt);
+    expired_dt.setMonth(expired_dt.getMonth() + expire_after);
+    let is_expired = now.getTime() >= expired_dt.getTime();
+    return [is_expired, get_dt_str(expired_dt)];
+}
+
 module.exports = {
     current_dt_str,
     dt_local,
+    get_dt_str,
     get_address_array,
     get_address_str,
     format_status,
@@ -119,5 +172,8 @@ module.exports = {
     validate_id_name,
     validate_number_postal_area,
     validate_address,
-    validate_resident_key
+    validate_resident_key,
+    validate_money_order,
+    validate_datetime,
+    expiration_check
 }

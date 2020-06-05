@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 20, 2020 at 04:24 PM
+-- Generation Time: Jun 05, 2020 at 07:07 PM
 -- Server version: 10.1.38-MariaDB
 -- PHP Version: 7.3.2
 
@@ -26,6 +26,12 @@ DELIMITER $$
 --
 -- Procedures
 --
+CREATE DEFINER=`root`@`localhost` PROCEDURE `active_money_orders_received` (IN `in_code` VARCHAR(5))  NO SQL
+SELECT id, sender_name, receiver_name, amount, expire_after, postal_areas.name AS posted_area, posted_location AS posted_code, posted_datetime FROM money_orders, postal_areas WHERE postal_areas.code = posted_location AND receiver_postal_code = in_code AND status = 'created' ORDER by id DESC$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `active_money_orders_sent` (IN `in_code` VARCHAR(5))  NO SQL
+SELECT id, sender_name, receiver_name, amount, expire_after, postal_areas.name AS receiver_area, receiver_postal_code AS receiver_code, posted_datetime FROM money_orders, postal_areas WHERE postal_areas.code = receiver_postal_code AND posted_location = in_code AND status = 'created' ORDER by id DESC$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `active_parcels_received` (IN `in_code` VARCHAR(5), IN `in_status` ENUM('on-route-receiver','receiver-unavailable'))  NO SQL
 SELECT detailed_parcels.id, receiver_id, receiver_name, number AS receiver_number, street AS receiver_street, sub_area AS receiver_sub_area, postal_code AS receiver_code, current_area, current_code, last_update, posted_location, delivery_attempts FROM detailed_parcels, addresses WHERE addresses.id = receiver_id AND addresses.postal_code = in_code AND status = in_status ORDER BY last_update DESC$$
 
@@ -38,6 +44,12 @@ SELECT detailed_reg_posts.id, receiver_id, receiver_name, sender_id, sender_name
 CREATE DEFINER=`root`@`localhost` PROCEDURE `active_reg_posts_sent` (IN `in_code` VARCHAR(5), IN `in_status` ENUM('on-route-receiver','receiver-unavailable','on-route-sender','sender-unavailable'))  NO SQL
 SELECT detailed_reg_posts.id, sender_id, sender_name, receiver_id, receiver_name, speed_post, current_area, current_code, last_update, delivery_attempts_receiver, delivery_attempts_sender, delivered_datetime FROM `detailed_reg_posts`, `addresses` WHERE status=in_status AND addresses.id = sender_id AND addresses.postal_code=in_code ORDER BY speed_post DESC, last_update DESC$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `completed_money_orders_received` (IN `in_code` VARCHAR(5), IN `in_status` ENUM('delivered','returned'))  NO SQL
+SELECT id, sender_name, receiver_name, amount, postal_areas.name AS posted_area, posted_location AS posted_code, posted_datetime, delivered_datetime FROM money_orders, postal_areas WHERE postal_areas.code = posted_location AND receiver_postal_code = in_code AND status = in_status AND posted_datetime BETWEEN DATE_SUB(CURDATE(), INTERVAL 730 DAY) AND CURDATE() ORDER by id DESC$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `completed_money_orders_sent` (IN `in_code` VARCHAR(5), IN `in_status` ENUM('delivered','returned'))  NO SQL
+SELECT id, sender_name, receiver_name, amount, expire_after, postal_areas.name AS receiver_area, receiver_postal_code AS receiver_code, posted_datetime, delivered_datetime FROM money_orders, postal_areas WHERE postal_areas.code = receiver_postal_code AND posted_location = in_code AND status = in_status AND posted_datetime BETWEEN DATE_SUB(CURDATE(), INTERVAL 730 DAY) AND CURDATE() ORDER by id DESC$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `completed_parcels_received` (IN `in_code` VARCHAR(5), IN `in_status` ENUM('delivered','failed'))  NO SQL
 SELECT parcels.id, receiver_id, receiver_name, number AS receiver_number, street AS receiver_street, sub_area AS receiver_sub_area, postal_code AS receiver_code, last_update, posted_location, delivery_attempts, delivered_datetime FROM parcels, addresses WHERE receiver_id = addresses.id AND addresses.postal_code = in_code AND status = in_status AND last_update BETWEEN DATE_SUB(CURDATE(), INTERVAL 90 DAY) AND CURDATE() ORDER BY last_update DESC$$
 
@@ -49,6 +61,36 @@ SELECT detailed_reg_posts.id, receiver_id, receiver_name, sender_id, sender_name
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `completed_reg_posts_sent` (IN `in_code` VARCHAR(5), IN `in_status` ENUM('delivered','sent-back','failed'))  NO SQL
 SELECT detailed_reg_posts.id, sender_id, sender_name, receiver_id, receiver_name, speed_post, current_area, current_code, last_update, delivery_attempts_receiver, delivery_attempts_sender, delivered_datetime FROM `detailed_reg_posts`, `addresses` WHERE status=in_status AND last_update BETWEEN DATE_SUB(CURDATE(), INTERVAL 90 DAY) AND CURDATE() AND addresses.id = sender_id AND addresses.postal_code=in_code ORDER BY last_update DESC$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `resident_active_parcels` (IN `resident_id` INT)  NO SQL
+SELECT id, receiver_name, description, current_location, last_update, postal_areas.name AS posted_area_name, posted_location AS posted_area_code, posted_datetime, delivery_attempts FROM parcels, postal_areas WHERE receiver_id = resident_id AND status IN ('on-route-receiver', 'receiver-unavailable') AND postal_areas.code = posted_location ORDER BY last_update DESC$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `resident_active_reg_posts_received` (IN `resident_id` INT, IN `in_status` ENUM('delivering','returning'))  NO SQL
+IF in_status='delivering' THEN
+SELECT registered_posts.id, sender_name, detailed_addresses.number, detailed_addresses.street, detailed_addresses.sub_area, detailed_addresses.postal_area, detailed_addresses.postal_code, receiver_name, speed_post, current_location, last_update, posted_datetime, delivery_attempts_receiver FROM registered_posts, detailed_addresses WHERE receiver_id = resident_id AND sender_id = detailed_addresses.id AND status IN ('on-route-receiver', 'receiver-unavailable') ORDER BY last_update DESC;
+
+ELSE
+SELECT registered_posts.id, sender_name, detailed_addresses.number, detailed_addresses.street, detailed_addresses.sub_area, detailed_addresses.postal_area, detailed_addresses.postal_code, receiver_name, speed_post, current_location, last_update, posted_datetime, delivery_attempts_receiver, delivery_attempts_sender FROM registered_posts, detailed_addresses WHERE receiver_id = resident_id AND sender_id = detailed_addresses.id AND status IN ('on-route-sender', 'sender-unavailable') ORDER BY last_update DESC;
+
+END IF$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `resident_active_reg_posts_sent` (IN `resident_id` INT, IN `in_status` ENUM('delivering','returning'))  NO SQL
+IF in_status='delivering' THEN
+SELECT registered_posts.id, sender_name, receiver_name, detailed_addresses.number, detailed_addresses.street, detailed_addresses.sub_area, detailed_addresses.postal_area, detailed_addresses.postal_code, speed_post, current_location, last_update, posted_datetime, delivery_attempts_receiver FROM registered_posts, detailed_addresses WHERE sender_id = resident_id AND receiver_id = detailed_addresses.id AND status IN ('on-route-receiver', 'receiver-unavailable') ORDER BY posted_datetime DESC;
+
+ELSE
+SELECT registered_posts.id, sender_name, receiver_name, detailed_addresses.number, detailed_addresses.street, detailed_addresses.sub_area, detailed_addresses.postal_area, detailed_addresses.postal_code, speed_post, current_location, last_update, posted_datetime, delivery_attempts_receiver, delivery_attempts_sender FROM registered_posts, detailed_addresses WHERE sender_id = resident_id AND receiver_id = detailed_addresses.id AND status IN ('on-route-sender', 'sender-unavailable') ORDER BY last_update DESC;
+
+END IF$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `resident_completed_parcels` (IN `resident_id` INT, IN `in_status` ENUM('delivered','failed'))  NO SQL
+SELECT id, receiver_name, description, last_update, postal_areas.name AS posted_area_name, posted_location AS posted_area_code, posted_datetime, delivery_attempts, delivered_datetime FROM parcels, postal_areas WHERE receiver_id = resident_id AND status = in_status AND postal_areas.code = posted_location AND last_update BETWEEN DATE_SUB(CURDATE(), INTERVAL 365 DAY) AND CURDATE() ORDER BY last_update DESC$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `resident_completed_reg_posts_received` (IN `resident_id` INT, IN `in_status` ENUM('delivered','sent-back','failed'))  NO SQL
+SELECT registered_posts.id, sender_name, detailed_addresses.number, detailed_addresses.street, detailed_addresses.sub_area, detailed_addresses.postal_area, detailed_addresses.postal_code, receiver_name, speed_post, last_update, posted_datetime, delivery_attempts_receiver, delivery_attempts_sender, delivered_datetime FROM registered_posts, detailed_addresses WHERE receiver_id = resident_id AND sender_id = detailed_addresses.id AND status=in_status AND last_update BETWEEN DATE_SUB(CURDATE(), INTERVAL 365 DAY) AND CURDATE() ORDER BY last_update DESC$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `resident_completed_reg_posts_sent` (IN `resident_id` INT, IN `in_status` ENUM('delivered','sent-back','failed'))  NO SQL
+SELECT registered_posts.id, sender_name, receiver_name, detailed_addresses.number, detailed_addresses.street, detailed_addresses.sub_area, detailed_addresses.postal_area, detailed_addresses.postal_code, speed_post, last_update, posted_datetime, delivery_attempts_receiver, delivery_attempts_sender, delivered_datetime FROM registered_posts, detailed_addresses WHERE sender_id = resident_id AND receiver_id = detailed_addresses.id AND status=in_status AND posted_datetime BETWEEN DATE_SUB(CURDATE(), INTERVAL 365 DAY) AND CURDATE() ORDER BY posted_datetime DESC$$
 
 DELIMITER ;
 
@@ -82,7 +124,9 @@ INSERT INTO `addresses` (`id`, `resident_key`, `number`, `street`, `sub_area`, `
 (8, 'WQAWCC', '15', 'vihara watta', 'yapalana', '11160'),
 (9, '33JH85', '33/1', 'abbey grange', 'walipanna', '81000'),
 (10, 'SY0F42', '102/C', 'Galle Rd', NULL, '10400'),
-(11, 'B66RLU', '70/2/1', 'james pieris road', 'rawathawatta', '10400');
+(11, 'B66RLU', '70/2/1', 'james pieris road', 'rawathawatta', '10400'),
+(12, 'BM9ZTO', '140/C', '2nd Cross Street', 'Diyatha Uyana', '12100'),
+(13, 'SNRDYE', '226/1', 'Hill Road', 'Pahala Yaya', '90000');
 
 -- --------------------------------------------------------
 
@@ -168,6 +212,37 @@ CREATE TABLE `detailed_reg_posts` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `money_orders`
+--
+
+CREATE TABLE `money_orders` (
+  `id` int(11) NOT NULL,
+  `sender_name` varchar(50) NOT NULL,
+  `receiver_name` varchar(50) NOT NULL,
+  `receiver_postal_code` varchar(5) NOT NULL,
+  `amount` decimal(6,2) NOT NULL,
+  `status` enum('created','delivered','returned') NOT NULL,
+  `price` decimal(6,2) NOT NULL,
+  `expire_after` int(11) NOT NULL DEFAULT '6',
+  `posted_location` varchar(5) NOT NULL,
+  `posted_datetime` datetime NOT NULL,
+  `secret_key` varchar(255) NOT NULL,
+  `delivered_datetime` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+--
+-- Dumping data for table `money_orders`
+--
+
+INSERT INTO `money_orders` (`id`, `sender_name`, `receiver_name`, `receiver_postal_code`, `amount`, `status`, `price`, `expire_after`, `posted_location`, `posted_datetime`, `secret_key`, `delivered_datetime`) VALUES
+(1, 'A.B.C. Perera', 'John Hamish Watson', '10400', '500.00', 'delivered', '80.50', 6, '11160', '2020-06-02 07:39:00', '$2b$10$jC9z8WDD0TxTyOldcD4q1eeMsA6.ZHREJOWl7KjPi5Jez8iKlZBEO', '2020-06-03 11:39:12'),
+(2, 'C.H. Mary Campbell', 'Colum Mckenzie', '90000', '1825.50', 'returned', '156.20', 6, '10400', '2020-06-02 07:52:00', '$2b$10$zNjz6qbPF2Efsm4WiDow/.MZ8SmwXxN5L5q83ate.ZzROq2v3GRy2', '2020-06-05 22:10:52'),
+(3, 'Lindsey Morgan', 'I.J. Sarath', '10400', '3645.50', 'created', '25.00', 2, '10400', '2020-06-05 19:30:07', '$2b$10$t.EJI.f2de7cU36loFv25eDgtpwpqlPfwdkcIR6TqqVadmrj2X08u', NULL),
+(4, 'E. D. C. Jayaratna', 'M. N. Wanigarathne', '20800', '784.75', 'created', '63.90', 5, '10400', '2020-06-05 22:35:53', '$2b$10$E60cGmJdbTh2yDDHsLmRa.WmEHetl96Fw01buTSg1SKr.vzFn1Iee', NULL);
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `normal_posts`
 --
 
@@ -184,9 +259,9 @@ CREATE TABLE `normal_posts` (
 --
 
 INSERT INTO `normal_posts` (`address_id`, `on_route_count`, `delivered_count`, `failed_delivery_count`, `total_price`) VALUES
-(1, 20, 0, 0, '59.37'),
-(2, 3, 0, 0, '0.00'),
-(3, 4, 0, 0, '0.00'),
+(1, 18, 0, 2, '59.37'),
+(2, 2, 0, 1, '0.00'),
+(3, 5, 0, 0, '0.00'),
 (5, 1, 0, 0, '0.00');
 
 -- --------------------------------------------------------
@@ -217,9 +292,9 @@ CREATE TABLE `parcels` (
 
 INSERT INTO `parcels` (`id`, `receiver_id`, `receiver_name`, `payment`, `description`, `status`, `current_location`, `last_update`, `posted_location`, `posted_datetime`, `reached_receiver_po`, `delivery_attempts`, `delivered_datetime`) VALUES
 (1, 2, 'John W.', '170.00', NULL, 'delivered', '10400', '2020-05-12 09:10:00', '01000', '2020-05-09 07:25:13', '2020-05-11 14:23:44', 1, '2020-05-12 09:10:00'),
-(2, 4, 'Alice', '96.20', NULL, 'on-route-receiver', '80300', '2020-05-12 12:39:21', '10400', '2020-05-09 07:32:11', NULL, 0, NULL),
+(2, 4, 'Alice', '96.20', NULL, 'on-route-receiver', '80300', '2020-05-12 13:00:09', '10400', '2020-05-09 07:32:11', NULL, 0, NULL),
 (3, 7, 'Clark', '40.00', NULL, 'failed', '10400', '2020-05-13 17:12:24', '10400', '2020-05-10 08:58:40', '2020-05-10 08:58:40', 3, NULL),
-(4, 9, 'Abeyratna', '225.50', NULL, 'receiver-unavailable', '81000', '2020-05-16 06:55:00', '01000', '2020-05-13 17:08:34', '2020-05-15 12:21:46', 1, NULL),
+(4, 9, 'Abeyratna', '225.50', NULL, 'receiver-unavailable', '81000', '2020-05-15 19:35:58', '01000', '2020-05-13 17:08:34', '2020-05-15 12:21:46', 1, NULL),
 (5, 10, 'William', '384.15', 'e-bay order', 'on-route-receiver', '80000', '2020-05-17 14:06:13', '82000', '2020-05-15 07:26:00', NULL, 0, NULL),
 (6, 2, 'Sam W.', '95.00', NULL, 'on-route-receiver', '10400', '2020-05-17 14:08:53', '12100', '2020-05-15 13:17:34', '2020-05-17 14:08:53', 0, NULL),
 (7, 11, 'Mr. Bates', '205.00', 'FRAGILE !!!', 'on-route-receiver', '90000', '2020-05-19 08:16:51', '90000', '2020-05-19 08:16:51', NULL, 0, NULL);
@@ -265,10 +340,12 @@ CREATE TABLE `postal_areas` (
 --
 
 INSERT INTO `postal_areas` (`code`, `name`, `password`) VALUES
+('00400', 'bambalapitiya', NULL),
 ('01000', 'maradana', '$2b$10$jGIITzcjRWCOGwjsPKEsruLYG2tGYDGCK9ejTklDlPIxCKxQl32uS'),
 ('10400', 'moratuwa', '$2b$10$.YIOLgPm2.M98wvc4GIsi.e/.dQtblU6LGn2qluFKLjz6JBqBKZcW'),
 ('11000', 'gampaha', NULL),
 ('11160', 'kal-eliya', NULL),
+('11200', 'mirigama', NULL),
 ('12000', 'kalutara', NULL),
 ('12100', 'matugama', NULL),
 ('20400', 'peradeniya', NULL),
@@ -276,7 +353,7 @@ INSERT INTO `postal_areas` (`code`, `name`, `password`) VALUES
 ('22200', 'nuwara-eliya', NULL),
 ('40000', 'jaffna', NULL),
 ('70600', 'eheliyagoda', NULL),
-('80000', 'galle', NULL),
+('80000', 'galle', '$2b$10$kDgIBKFcSmQ50MsujqhouejsT6km92oZnlqAHErYV7jBsRmdmC7fa'),
 ('80300', 'ambalangoda', NULL),
 ('81000', 'matara', NULL),
 ('82000', 'hambantota', NULL),
@@ -320,16 +397,16 @@ INSERT INTO `registered_posts` (`id`, `sender_id`, `sender_name`, `receiver_id`,
 (8, 2, 'Mary W.', 8, 'Frank', '55.48', 0, 'failed', '10400', '2020-04-25 17:26:46', '2020-05-02 08:11:00', 3, 3, NULL),
 (9, 9, 'Weerakkody', 2, 'John W.', '105.00', 0, 'failed', '81000', '2020-04-27 05:08:29', '2020-05-04 12:40:10', 3, 2, NULL),
 (10, 2, 'John W.', 10, 'Abeyratna', '40.50', 0, 'delivered', '10400', '2020-04-28 15:19:11', '2020-04-29 10:00:00', 1, 0, '2020-04-29 10:00:00'),
-(11, 6, 'Don', 2, 'Sam W.', '238.00', 0, 'sender-unavailable', '40000', '2020-04-29 13:50:45', '2020-05-06 11:32:27', 3, 1, NULL),
+(11, 6, 'Don', 2, 'Sam W.', '238.00', 0, 'sender-unavailable', '40000', '2020-04-29 13:50:45', '2020-05-04 14:27:13', 3, 1, NULL),
 (12, 2, 'Mary W.', 3, 'Felicia', '115.25', 0, 'sender-unavailable', '10400', '2020-04-29 09:14:00', '2020-05-05 13:23:15', 2, 1, NULL),
 (13, 2, 'Sam W.', 4, 'Cooray', '68.60', 0, 'on-route-sender', '80300', '2020-04-30 18:44:23', '2020-05-05 17:45:24', 3, 0, NULL),
 (14, 8, 'Paul', 2, 'Dean W.', '73.00', 0, 'on-route-sender', '11000', '2020-05-01 09:15:25', '2020-05-06 06:08:49', 2, 0, NULL),
-(15, 2, 'Mary W.', 4, 'Gunasingha', '54.75', 0, 'receiver-unavailable', '80000', '2020-05-02 08:18:12', '2020-05-05 12:17:00', 1, 0, NULL),
+(15, 2, 'Mary W.', 4, 'Gunasingha', '54.75', 0, 'receiver-unavailable', '80000', '2020-05-02 08:18:12', '2020-05-05 13:51:45', 1, 0, NULL),
 (16, 6, 'Drupal', 2, 'Sam W.', '267.00', 0, 'receiver-unavailable', '10400', '2020-05-02 06:39:22', '2020-05-06 13:25:39', 1, 0, NULL),
 (17, 9, 'Weerakkody', 2, 'Dean W.', '324.50', 1, 'on-route-receiver', '80000', '2020-05-05 06:11:54', '2020-05-06 10:21:00', 0, 0, NULL),
 (18, 2, 'John W.', 5, 'Peiris', '93.50', 0, 'on-route-receiver', '01000', '2020-05-06 11:50:37', '2020-05-06 19:45:05', 0, 0, NULL),
 (19, 1, 'Kamal Perera', 7, 'Silva', '106.50', 0, 'on-route-receiver', '11000', '2020-05-06 16:40:30', '2020-05-07 07:53:22', 0, 0, NULL),
-(20, 3, 'Sarath', 11, 'Edison', '244.90', 1, 'on-route-receiver', '20400', '2020-05-08 23:39:51', '2020-05-08 23:39:51', 0, 0, NULL);
+(20, 3, 'Sarath', 11, 'Edison', '244.90', 1, 'on-route-receiver', '01000', '2020-05-08 23:39:51', '2020-05-09 16:01:25', 0, 0, NULL);
 
 --
 -- Triggers `registered_posts`
@@ -469,6 +546,14 @@ ALTER TABLE `admins`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `money_orders`
+--
+ALTER TABLE `money_orders`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `receiver_postal_code` (`receiver_postal_code`),
+  ADD KEY `posted_location` (`posted_location`);
+
+--
 -- Indexes for table `normal_posts`
 --
 ALTER TABLE `normal_posts`
@@ -506,13 +591,19 @@ ALTER TABLE `registered_posts`
 -- AUTO_INCREMENT for table `addresses`
 --
 ALTER TABLE `addresses`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- AUTO_INCREMENT for table `admins`
 --
 ALTER TABLE `admins`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `money_orders`
+--
+ALTER TABLE `money_orders`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `parcels`
@@ -535,6 +626,13 @@ ALTER TABLE `registered_posts`
 --
 ALTER TABLE `addresses`
   ADD CONSTRAINT `addresses_ibfk_1` FOREIGN KEY (`postal_code`) REFERENCES `postal_areas` (`code`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `money_orders`
+--
+ALTER TABLE `money_orders`
+  ADD CONSTRAINT `money_orders_ibfk_1` FOREIGN KEY (`receiver_postal_code`) REFERENCES `postal_areas` (`code`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `money_orders_ibfk_2` FOREIGN KEY (`posted_location`) REFERENCES `postal_areas` (`code`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Constraints for table `normal_posts`

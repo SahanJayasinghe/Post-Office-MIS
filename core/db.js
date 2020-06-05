@@ -55,7 +55,9 @@ function query(sql, args){
             if (err) {
                 console.log('db_file_reject');
                 // console.log(err);
-                console.log(err.sqlState, err.sql, err.sqlMessage);
+                console.log(err.sqlState);
+                console.log(err.sql);
+                console.log(err.sqlMessage);
                 reject({query_error: err.sqlMessage});                    
             }
             else{
