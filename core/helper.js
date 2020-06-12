@@ -78,15 +78,17 @@ function validate_currency(price){
 
 function validate_id_name(input){
     let id_check = (input.hasOwnProperty('id')) && /^\d+$/.test(input.id);
-    let name_check = (input.hasOwnProperty('name')) && /^(?=.*[A-Za-z])[A-Za-z\-,.\s]{1,50}$/.test(input.name);
+    let name_pattern = /^(?=.*[A-Za-z])[A-Za-z\-,.\s]{1,50}$/;
+    let name_check = (input.hasOwnProperty('name')) && (![null, undefined].includes(input.name)) && name_pattern.test(input.name);
     return (id_check && name_check);
 }
 
 function validate_number_postal_area(input){
     // input = { number: 121/B, postal_area: 'moratuwa,10400' }
-    let number_check = input.hasOwnProperty('number') && /^(?=.*[A-Za-z0-9])[A-Za-z\d\-/,\\]{1,50}$/.test(input.number);
+    let number_pattern = /^(?=.*[A-Za-z0-9])[A-Za-z\d\-/,\\]{1,50}$/;
+    let number_check = input.hasOwnProperty('number') && (![null, undefined].includes(input.number)) && number_pattern.test(input.number);
     let code_check = false;
-    if (input.hasOwnProperty('postal_area')){
+    if (input.hasOwnProperty('postal_area') && ![null, undefined].includes(input.postal_area)){
         let pa_arr = input.postal_area.split(',');        
         code_check = (pa_arr.length == 2) && /^\d{5}$/.test(pa_arr[1]);
     }
@@ -95,12 +97,18 @@ function validate_number_postal_area(input){
 
 function validate_address(address){
     // address = {number: 121/B, street: Temple Rd., sub_area: Rawathawatta, postal_area: moratuwa,10400}
-    let number_check = address.hasOwnProperty('number') && /^(?=.*[A-Za-z0-9])[A-Za-z\d\-/,\\]{1,50}$/.test(address.number);
-    let pattern = /^(?=.*[A-Za-z0-9])[A-Za-z\d\-/()\\.,\s]{1,50}$/;
-    let street_check = address.hasOwnProperty('street') && (pattern.test(address.street) || address.street.trim() === '');
-    let sub_area_check = address.hasOwnProperty('sub_area') && (pattern.test(address.sub_area) || address.sub_area.trim() === '');
+    let special_arr = [null, undefined, true, false];
+    let num_pattern = /^(?=.*[A-Za-z0-9])[A-Za-z\d\-/,\\]{1,50}$/;
+    let number_check = address.hasOwnProperty('number') && !special_arr.includes(address.number) && num_pattern.test(address.number);
+    
+    let pattern = /^(?=.*[A-Za-z])[A-Za-z\d\-/()\\.,\s]{1,50}$/;
+    let street_check = address.hasOwnProperty('street') && !special_arr.includes(address.street) 
+        && (pattern.test(address.street) || address.street.trim() === '');
+    let sub_area_check = address.hasOwnProperty('sub_area') && !special_arr.includes(address.sub_area) 
+        && (pattern.test(address.sub_area) || address.sub_area.trim() === '');
+    
     let code_check = false;
-    if (address.hasOwnProperty('postal_area')){
+    if (address.hasOwnProperty('postal_area') && (typeof address.postal_area === 'string')){
         let pa_arr = address.postal_area.split(',');        
         code_check = (pa_arr.length == 2) && /^\d{5}$/.test(pa_arr[1]);
     }
@@ -109,7 +117,7 @@ function validate_address(address){
 
 function validate_resident_key(input){
     let resident_key_check = false;
-    if(input.hasOwnProperty('resident_key')){
+    if(input.hasOwnProperty('resident_key') && (typeof input.resident_key === 'string')){
         let resident_key_length = input.resident_key.trim().length;
         resident_key_check = (resident_key_length > 0) && (resident_key_length < 21);
     }
@@ -118,17 +126,25 @@ function validate_resident_key(input){
 
 function validate_money_order(body){
     let body_length = Object.keys(body).length;
-    let sen_name_check = body.hasOwnProperty('sender_name') && /^(?=.*[A-Za-z])[A-Za-z\-,.\s]{1,50}$/.test(body.sender_name);
-    let rec_name_check = body.hasOwnProperty('receiver_name') && /^(?=.*[A-Za-z])[A-Za-z\-,.\s]{1,50}$/.test(body.receiver_name);
+    
+    let name_pattern = /^(?=.*[A-Za-z])[A-Za-z\-,.\s]{1,50}$/;
+    let sen_name_check = body.hasOwnProperty('sender_name') && (typeof body.sender_name === 'string')
+        && name_pattern.test(body.sender_name);
+    let rec_name_check = body.hasOwnProperty('receiver_name') && (typeof body.receiver_name === 'string')
+        && name_pattern.test(body.receiver_name);
+    
     let code_check = body.hasOwnProperty('receiver_postal_code') && /^\d{5}$/.test(body.receiver_postal_code);
-    let amount_check = validate_currency(body.amount) && parseFloat(body.amount) <= 5000;
-    let price_check = validate_currency(body.price);
-    let expire_check = body.hasOwnProperty('expire_after') && /^\d{1,2}$/.test(body.expire_after);
-    expire_check =  expire_check && parseInt(body.expire_after) > 0 && parseInt(body.expire_after) < 25;
+    let amount_check = body.hasOwnProperty('amount') && /^(?=.*[1-9])\d{1,5}(?:\.\d{2})$/.test(body.amount)
+        && parseFloat(body.amount) <= 50000;
+    let price_check = body.hasOwnProperty('price') && validate_currency(body.price);
+
+    let expire_check = body.hasOwnProperty('expire_after') && /^\d{1,2}$/.test(body.expire_after)
+        && parseInt(body.expire_after) > 0 && parseInt(body.expire_after) < 25;
+    
     let po_check = body.hasOwnProperty('posted_location') && /^\d{5}$/.test(body.posted_location);
 
-    let is_valid = (body_length === 7) && sen_name_check && rec_name_check && code_check;
-    is_valid = is_valid && amount_check && price_check && po_check && expire_check;
+    let is_valid = (body_length === 7) && sen_name_check && rec_name_check && code_check
+        && amount_check && price_check && po_check && expire_check;
     return is_valid;
 }
 

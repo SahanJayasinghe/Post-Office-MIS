@@ -1,5 +1,6 @@
 const Model = require('../../core/Model');
 const bcrpyt = require('bcrypt');
+const debug = require('debug')('po_mis:dev');
 
 async function get_postal_area(input){
     //input can be postal code or area name
@@ -23,7 +24,7 @@ async function get_postal_area(input){
         // return result2;
     }
     
-    console.log(result);
+    debug(result);
     if(result.query_error){
         return {output: null, error: result.query_error.message};
     }
@@ -46,25 +47,26 @@ async function get_all_postal_areas(){
 async function insert_postal_area(input_obj){
     input_obj.name = input_obj.name.trim().toLowerCase(); 
 
-    let result = await Model.select('postal_areas', '*', 'code = ? OR name = ?', [input_obj.code, input_obj.name]);
-    // let result2 = await Model.select('postal_areas', '*', 'name = ?', input_obj.name);
+    let result = await Model.select('postal_areas', '*', 'code = ?', input_obj.code);
+    debug(result);
 
-    if(result.query_output.length == 2){
-        return {output: null, error: 'There is a postal area with the given code and another postal area with the given name'};
+    if(result.query_output.length){
+        let msg = `There is a postal area named ${result.query_output[0].name} with the given code ${input_obj.code}`;
+        return {output: null, error: msg};
     }
-    else if(result.query_output.length == 1){
-        let code_check = (result.query_output[0].code == input_obj.code);
-        let name_check = (result.query_output[0].name == input_obj.name);
-        if(code_check && name_check){
-            return {output: null, error: 'There is a postal area with the given code and name'};
-        }
-        else if(code_check){
-            return {output: null, error: 'There is a postal area with the given code. Area name is distinct'};
-        }
-        else{
-            return {output: null, error: 'There is a postal area with the given name. Area code is distinct'};
-        }
-    }
+    // else if(result.query_output.length == 1){
+    //     let code_check = (result.query_output[0].code == input_obj.code);
+    //     let name_check = (result.query_output[0].name == input_obj.name);
+    //     if(code_check && name_check){
+    //         return {output: null, error: `Postal area ${input_obj.name}, ${input_obj.code} already exists.`};
+    //     }
+    //     else if(code_check){
+    //         return {output: null, error: `There is a postal area with the given code ${input_obj.code}. Area name is distinct`};
+    //     }
+    //     else{
+    //         return {output: null, error: `There is a postal area with the given name ${input_obj.name}. Area code is distinct`};
+    //     }
+    // }
     else if(result.query_error){
         return {output: null, error: 'Database read error'};
     }
@@ -120,7 +122,7 @@ async function update_postal_area(code, name, prev_code){
         update_fields.push('name = ?');
         params.push(name);
     }
-    console.log(update_fields);
+    debug(update_fields);
     if(update_fields.length == 0){
         return {output: null, error: 'Update values are same as the existing values'};
     }
@@ -168,7 +170,7 @@ async function get_postal_areas_by_province(input){
     // input is a digit (1 to 9)
     let condition = (input === '1') ? `code LIKE '1%' OR code LIKE '0%'` : `code LIKE '${input}%'`;
     let result = await Model.select('postal_areas', '*', condition);
-    console.log(result);
+    debug(result);
 
     if(result.query_error){
         return {output: null, error: result.query_error.message};
@@ -186,7 +188,7 @@ async function get_postal_areas_by_province(input){
                 prov_pa[key] = [pa_obj];
             }
         }
-        console.log(prov_pa);
+        debug(prov_pa);
         return {output: prov_pa, error: null};
     }
 }

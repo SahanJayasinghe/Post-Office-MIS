@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const jwt = require('jsonwebtoken');
+// const jwt = require('jsonwebtoken');
 const Admin = require('../models/Admin');
 
 router.post('/login', async (req, res) => {
@@ -18,13 +18,7 @@ router.post('/login', async (req, res) => {
                 res.status(400).send(result.error);
             }
             else{
-                let token_data = {
-                    user_type: 'admin',
-                    user_id: result.output.id
-                }
-                // secret key should be retrieved from environment variable (need npm Config package)
-                const token = jwt.sign(token_data, 'SecretKey');
-                console.log(token);
+                const token = Admin.generate_admin_token(result.output.id);
                 res.status(200).send({token, username: result.output.username});
             }
         }

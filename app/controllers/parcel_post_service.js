@@ -44,7 +44,9 @@ router.post('/', auth_post_office, async (req, res) => {
         let body_length = Object.keys(req.body).length;
         let receiver_check = ( req.body.hasOwnProperty('receiver') && helper.validate_id_name(req.body.receiver) );
         let payment_check = (req.body.hasOwnProperty('payment') && helper.validate_currency(req.body.payment));
-        let descript_check = (req.body.hasOwnProperty('descript'));
+        let str_pattern = /^(?=.*[A-Za-z])[A-Za-z\d\-/()[\]{}:<>?|!@&#*^$_=+\\.,\s]{1,1024}$/;
+        let descript_check = ( req.body.hasOwnProperty('descript') 
+            && ( req.body.descript.trim() === '' || str_pattern.test(req.body.descript)) );
         let code_check = req.body.hasOwnProperty('post_office') && /^\d{5}$/.test(req.body.post_office);
 
         if((body_length == 4) && receiver_check && payment_check && descript_check && code_check){

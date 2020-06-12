@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const jwt = require('jsonwebtoken');
+// const jwt = require('jsonwebtoken');
 const Post_Office = require('../models/Post_Office');
 const Postal_Area = require('../models/Postal_Area');
 const auth_post_office = require('../../middleware/auth_post_office');
@@ -36,13 +36,14 @@ router.post('/login', async (req, res)=> {
                 //     data: 'foobar'
                 //   }, 'secret', { expiresIn: '7 days' });
 
-                let token_data = {
-                    user_type: 'post_office',
-                    user_id: result.output.code
-                }
-                // secret key should be retrieved from environment variable (need npm Config package)
-                const token = jwt.sign(token_data, 'SecretKey');
-                console.log(token);
+                // let token_data = {
+                //     user_type: 'post_office',
+                //     user_id: result.output.code
+                // }
+                // // secret key should be retrieved from environment variable (need npm Config package)
+                // const token = jwt.sign(token_data, 'SecretKey');
+                // console.log(token);
+                const token = Post_Office.generate_po_token(result.output.code);
                 res.status(200).send({token: token, postal_area: result.output.name});
             }
         }

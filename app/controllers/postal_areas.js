@@ -1,3 +1,4 @@
+const debug = require('debug')('po_mis:dev');
 const express = require('express');
 const router = express.Router();
 const Postal_Area = require('../models/Postal_Area');
@@ -6,7 +7,7 @@ const auth_admin = require('../../middleware/auth_admin');
 router.get('/', async (req, res) => {
     try {
         let result = await Postal_Area.get_all_postal_areas();
-        console.log(result);
+        debug(result);
 
         if(result.error){
             res.status(400).send(result.error);
@@ -25,7 +26,7 @@ router.get('/', async (req, res) => {
 router.get('/no-account', async (req, res) => {
     try {
         let result = await Postal_Area.postal_areas_without_account();
-        console.log(result);
+        debug(result);
 
         if(result.error){
             res.status(400).send(result.error);
@@ -64,7 +65,7 @@ router.post('/', auth_admin, async (req, res) => {
     try {
         // req.body contains postal area name and code
         // ex: {code: '10400', name: 'Moratuwa'}
-        console.log(req.body);
+        debug(req.body);
         let body_length = Object.keys(req.body).length;
         let code_check = req.body.hasOwnProperty('code') && /^\d{5}$/.test(req.body.code);
         let name_check = req.body.hasOwnProperty('name') && /^[a-zA-Z][a-zA-Z0-9.\-\s]{0,19}$/.test(req.body.name);
@@ -93,7 +94,7 @@ router.post('/', auth_admin, async (req, res) => {
 router.post('/province', auth_admin, async (req, res) => {
     try {
         // body contains {province: '1'}  digit of 1-9
-        console.log(req.body);
+        debug(req.body);
         let body_length = Object.keys(req.body).length;
         let prov_check = req.body.hasOwnProperty('province') && /^[1-9]{1}$/.test(req.body.province);
         if(body_length == 1 && prov_check){
@@ -119,7 +120,7 @@ router.post('/province', auth_admin, async (req, res) => {
 router.put('/', auth_admin, async(req, res) => {
     try {
         // body contains {code, name, prev_code}
-        console.log(req.body);
+        debug(req.body);
         let body_length = Object.keys(req.body).length;
         let code_check = req.body.hasOwnProperty('code') && /^\d{5}$/.test(req.body.code);
         let name_check = req.body.hasOwnProperty('name') && /^[a-zA-Z][a-zA-Z0-9.\-\s]{0,19}$/.test(req.body.name);

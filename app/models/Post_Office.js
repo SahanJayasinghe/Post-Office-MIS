@@ -1,4 +1,7 @@
 const bcrpyt = require('bcrypt');
+const config = require('config');
+const debug = require('debug')('po_mis:dev');
+const jwt = require('jsonwebtoken');
 const Model = require('../../core/Model');
 const Address = require('./Address');
 const Postal_Area = require('./Postal_Area');
@@ -255,10 +258,22 @@ async function get_money_orders_by_status(post_office, sent_or_received, status)
     return result;
 }
 
+function generate_po_token(post_office){
+    let token_data = {
+        user_type: 'post_office',
+        user_id: post_office
+    }
+    // secret key should be retrieved from environment variable (need npm Config package)
+    const token = jwt.sign(token_data, config.get('jwtPrivateKey'));
+    debug(token);
+    return token;
+}
+
 module.exports = {
     login,
     get_reg_posts_by_status,
     get_parcels_by_status,
     get_money_orders_by_status,
-    get_reg_posts
+    get_reg_posts,
+    generate_po_token
 }

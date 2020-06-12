@@ -1,10 +1,13 @@
-var mysql = require('mysql');
+const mysql = require('mysql');
+const config = require('config');
+const debug = require('debug')('po_mis:db');
 
+const db_name = config.get('db');
 const db_config = {
     host: 'localhost',
     user: 'root',
     password: '',
-    database: 'post_office_mis'
+    database: db_name
 };
 
 let connection;
@@ -22,7 +25,7 @@ function handleConnection() {
             //  and to allow our node script to process asynchronous requests in the meantime.
         }
         else{
-            console.log(`Connected to database using threadID ${connection.threadId}`);
+            console.log(`Connected to database '${db_name}' using threadID ${connection.threadId}`);
         }                                     
     });                                     
                                             
@@ -40,28 +43,30 @@ function handleConnection() {
 }  
 
 function connect(){
+    connection = mysql.createConnection(db_config);
+
     connection.connect((err) => {
         if (err) {
             console.error('error connecting: ' + err.message);
             return;
         }
-        console.log(`Connected to database using threadID ${connection.threadId}`);
+        debug(`Connected to database '${db_name}' using threadID ${connection.threadId}`);
     });        
 }
 
 function query(sql, args){
     return new Promise((resolve, reject) => {
         connection.query(sql, args, (err, resultQ) => {
-            if (err) {
-                console.log('db_file_reject');
+            if (err) {                
+                debug('db_file_reject');
                 // console.log(err);
-                console.log(err.sqlState);
-                console.log(err.sql);
-                console.log(err.sqlMessage);
-                reject({query_error: err.sqlMessage});                    
+                debug(err.sqlState);
+                debug(err.sql);
+                debug(err.sqlMessage);                
+                reject(err);
             }
-            else{
-                console.log('db_file_resolve');
+            else{                
+                debug('db_file_resolve');                
                 // console.log(resultQ);
                 resolve({query_output: resultQ, query_error: null});
             }                
@@ -74,6 +79,7 @@ function disconnect(){
         connection.end( err => {
             if (err)
                 return reject(err);
+            debug(`closed connection to db ${db_name}`);
             resolve();
         });
     });
@@ -81,5 +87,7 @@ function disconnect(){
 
 module.exports = {
     handleConnection,
-    query
+    query,
+    connect,
+    disconnect
 };
