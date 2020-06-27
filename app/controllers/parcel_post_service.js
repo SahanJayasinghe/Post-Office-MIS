@@ -7,10 +7,10 @@ const auth_post_office = require('../../middleware/auth_post_office');
 
 router.post('/address', auth_post_office, async (req, res) => {
     try {
-        // body contains house number & postal area
+        // body contains house number & postal code
         console.log(req.body);
         let body_length = Object.keys(req.body).length;
-        let body_check = helper.validate_number_postal_area(req.body);
+        let body_check = helper.validate_number_postal_code(req.body);
         if((body_length == 2) && body_check){      
             let result = await Address.get_address_by_details(req.body);
             if(result.error){

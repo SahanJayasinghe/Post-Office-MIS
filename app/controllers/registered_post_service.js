@@ -8,11 +8,11 @@ const auth_post_office = require('../../middleware/auth_post_office');
 router.post('/address', auth_post_office, async (req, res) => {
     try {
         //req.body contains {receiver, sender}
-        // receiver = {number: 46, postal_area: kal-eliya,11160}
-        // sender = {number: 121/B, postal_area: moratuwa,10400}
+        // receiver = {number: 46, postal_code: 11160}
+        // sender = {number: 121/B, postal_code: 10400}
         let body_length = Object.keys(req.body).length;
-        let receiver_check = req.body.hasOwnProperty('receiver') && helper.validate_number_postal_area(req.body.receiver);
-        let sender_check = req.body.hasOwnProperty('sender') && helper.validate_number_postal_area(req.body.sender);
+        let receiver_check = req.body.hasOwnProperty('receiver') && helper.validate_number_postal_code(req.body.receiver);
+        let sender_check = req.body.hasOwnProperty('sender') && helper.validate_number_postal_code(req.body.sender);
         
         if((body_length == 2) && receiver_check && sender_check){
 

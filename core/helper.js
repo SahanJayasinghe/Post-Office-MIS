@@ -84,7 +84,7 @@ function validate_id_name(input){
 }
 
 function validate_number_postal_area(input){
-    // input = { number: 121/B, postal_area: 'moratuwa,10400' }
+    // input = { number: '121/B', postal_area: 'moratuwa,10400' }
     let number_pattern = /^(?=.*[A-Za-z0-9])[A-Za-z\d\-/,\\]{1,50}$/;
     let number_check = input.hasOwnProperty('number') && (![null, undefined].includes(input.number)) && number_pattern.test(input.number);
     let code_check = false;
@@ -95,8 +95,16 @@ function validate_number_postal_area(input){
     return number_check && code_check;
 }
 
+function validate_number_postal_code(input){
+    // input = { number: '121/B', postal_code: '10400' }
+    let number_pattern = /^(?=.*[A-Za-z0-9])[A-Za-z\d\-/,\\]{1,50}$/;
+    let number_check = input.hasOwnProperty('number') && (![null, undefined].includes(input.number)) && number_pattern.test(input.number);
+    let code_check = input.hasOwnProperty('postal_code') && /^\d{5}$/.test(input.postal_code);
+    return number_check && code_check;
+}
+
 function validate_address(address){
-    // address = {number: 121/B, street: Temple Rd., sub_area: Rawathawatta, postal_area: moratuwa,10400}
+    // address = {number: 121/B, street: Temple Rd., sub_area: Rawathawatta, postal_code: 10400}
     let special_arr = [null, undefined, true, false];
     let num_pattern = /^(?=.*[A-Za-z0-9])[A-Za-z\d\-/,\\]{1,50}$/;
     let number_check = address.hasOwnProperty('number') && !special_arr.includes(address.number) && num_pattern.test(address.number);
@@ -107,11 +115,11 @@ function validate_address(address){
     let sub_area_check = address.hasOwnProperty('sub_area') && !special_arr.includes(address.sub_area) 
         && (pattern.test(address.sub_area) || address.sub_area.trim() === '');
     
-    let code_check = false;
-    if (address.hasOwnProperty('postal_area') && (typeof address.postal_area === 'string')){
-        let pa_arr = address.postal_area.split(',');        
-        code_check = (pa_arr.length == 2) && /^\d{5}$/.test(pa_arr[1]);
-    }
+    let code_check = address.hasOwnProperty('postal_code') && /^\d{5}$/.test(address.postal_code);
+    // if (address.hasOwnProperty('postal_area') && (typeof address.postal_area === 'string')){
+    //     let pa_arr = address.postal_area.split(',');        
+    //     code_check = (pa_arr.length == 2) && /^\d{5}$/.test(pa_arr[1]);
+    // }
     return number_check && street_check && sub_area_check && code_check;
 }
 
@@ -187,6 +195,7 @@ module.exports = {
     validate_currency,
     validate_id_name,
     validate_number_postal_area,
+    validate_number_postal_code,
     validate_address,
     validate_resident_key,
     validate_money_order,

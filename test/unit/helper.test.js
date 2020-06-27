@@ -112,25 +112,25 @@ describe('helper functions', () => {
         });
     });
 
-    describe('validate_number_postal_area', () => {
+    describe('validate_number_postal_code', () => {
         it('should return false to an invalid house number', () => {
             let test_arr = [null, '', undefined, 'a%', '{a}', '23 a'];
             test_arr.forEach(element => {
-                let result = helper.validate_number_postal_area({number: element, postal_area: 'a,11111'});
+                let result = helper.validate_number_postal_code({number: element, postal_code: '11111'});
                 expect(result).toBeFalsy();
             });
         });
 
-        it('should return false to an invalid postal area', () => {
-            let test_arr = [null, '', undefined, 'a%', '{a}', 'a,1111', 'a,'];
+        it('should return false to an invalid postal code', () => {
+            let test_arr = [null, '', undefined, 'a%', '{a}', '1111', '123456'];
             test_arr.forEach(element => {
-                let result = helper.validate_number_postal_area({number: '23/a', postal_area: element});
+                let result = helper.validate_number_postal_code({number: '23/a', postal_code: element});
                 expect(result).toBeFalsy();
             });
         });
         
         it('should return true for valid input', () => {
-            let result = helper.validate_number_postal_area({number: '23/a', postal_area: 'a,11111'});
+            let result = helper.validate_number_postal_code({number: '23/a', postal_code: '11111'});
             expect(result).toBeTruthy();
         });
     });
@@ -141,7 +141,7 @@ describe('helper functions', () => {
                 number: "1/B",
                 street: "a Rd.",
                 sub_area: "a b c",
-                postal_area: "a,11111",
+                postal_code: "11111"
             };
         }
         
@@ -175,11 +175,11 @@ describe('helper functions', () => {
             });
         });
 
-        it('should return false for postal areas with wrong format', () => {
-            let test_arr = [null, undefined, 'a%', 'a,1111', 'a,b,c'];
+        it('should return false for postal codes with wrong format', () => {
+            let test_arr = [null, undefined, 'a%', '1111', 'a,b,c'];
             let test_obj = get_test_address();
             test_arr.forEach(element => {
-                test_obj.postal_area = element;
+                test_obj.postal_code = element;
                 let result = helper.validate_address(test_obj);
                 expect(result).toBeFalsy();
             });

@@ -8,10 +8,10 @@ const helper = require('../../core/helper');
 
 router.post('/address', async (req, res) => {
     try {
-        // body contains number, postal_area, resident_key
+        // body contains number, postal_code, resident_key
         console.log(req.body);
         let body_length = Object.keys(req.body).length;
-        let number_pa_check = helper.validate_number_postal_area(req.body);
+        let number_pa_check = helper.validate_number_postal_code(req.body);
         let resident_key_check = false;
         if(req.body.hasOwnProperty('resident_key')){
             let resident_key_length = req.body.resident_key.trim().length;
@@ -19,7 +19,7 @@ router.post('/address', async (req, res) => {
         }
 
         if (body_length == 3 && number_pa_check && resident_key_check){
-            let input_obj = {number: req.body.number, postal_area: req.body.postal_area};
+            let input_obj = {number: req.body.number, postal_code: req.body.postal_code};
             let result = await Address.get_address_by_details(input_obj);
             if(result.error){
                 return res.status(400).send(result.error);
