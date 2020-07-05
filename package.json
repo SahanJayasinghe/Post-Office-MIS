@@ -4,7 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "node index.js",
     "test": "jest --watchAll --verbose --runInBand"
+  },
+  "engines": {
+    "node": "12.16.1"
   },
   "keywords": [],
   "author": "",

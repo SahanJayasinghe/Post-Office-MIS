@@ -1,6 +1,7 @@
 const Model = require('../../core/Model');
 const helper = require('../../core/helper');
 const Address = require('./Address');
+const { dt_local } = require('../../core/helper');
 
 async function create_parcel_post(receiver, payment, descript, post_office){
     // receiver = {id: 2, name: 'Kamal'}
@@ -49,14 +50,26 @@ async function update_location(parcel_id, post_office){
     else{
         let dt_str = helper.current_dt_str();
 
-        let update_str = 'current_location = ?, last_update = ?';
-        let params = [post_office, dt_str, parcel_id];
-        console.log(params);
-        let update_result = await Model.update('parcels', update_str, 'id = ?', params);
-        console.log(update_result);
-        if(update_result.query_error){
-            return {output: null, error: update_result.query_error.message};
-        }
+        let update_query = {
+            statement: `UPDATE parcels SET current_location = ?, last_update = ? WHERE id = ?`,
+            params: [post_office, dt_str, parcel_id]
+        };
+
+        let insert_query = {
+            statement: `INSERT INTO parcels_route_info SET ?`,
+            params: {parcel_id, location: post_office, updated_at: dt_str}
+        };
+
+        // let update_str = 'current_location = ?, last_update = ?';
+        // let params = [post_office, dt_str, parcel_id];
+        // console.log(params);
+        // let update_result = await Model.update('parcels', update_str, 'id = ?', params);
+        // console.log(update_result);
+        // if(update_result.query_error){
+        //     return {output: null, error: update_result.query_error.message};
+        // }
+        let trans_result = await Model.execute_transaction([update_query, insert_query]);
+        console.log(trans_result);
         return {output: {last_location: post_office, last_update: dt_str}, error: null};
     }
 }
@@ -141,12 +154,9 @@ async function get_parcel(parcel_id){
         cur_loc = `${PA_result.query_output[0].name},${PA_result.query_output[0].code}`;
         posted_loc = cur_loc;
     }
-    let reached_receiver_po = (parcel_result.query_output[0].reached_receiver_po) 
-                                ? helper.dt_local(parcel_result.query_output[0].reached_receiver_po)
-                                : null;
     let delivered_datetime = (parcel_result.query_output[0].delivered_datetime)
-                                ? helper.dt_local(parcel_result.query_output[0].delivered_datetime)
-                                : null;
+        ? helper.dt_local(parcel_result.query_output[0].delivered_datetime)
+        : null;
 
     let parcel_obj = {
         id: parcel_id,
@@ -157,11 +167,21 @@ async function get_parcel(parcel_id){
         last_update: helper.dt_local(parcel_result.query_output[0].last_update),
         posted_location: posted_loc,
         posted_dt: helper.dt_local(parcel_result.query_output[0].posted_datetime),
-        reached_receiver_po: reached_receiver_po,
         delivery_attempts: parcel_result.query_output[0].delivery_attempts,
         delivered_dt: delivered_datetime
     };
     return {output: parcel_obj, error: null};
+}
+
+async function get_route_info(id){
+    let route_info = await Model.call_procedure('parcel_route', id);
+    let route_info_len = route_info.query_output[0].length;
+    let route_list = [];
+    for (let i = 0; i < route_info_len; i++) {
+        const record = route_info.query_output[0][i];
+        route_list.push([record.name, record.code, dt_local(record.updated_at)]);        
+    }
+    return {output: route_list, error: null}
 }
 
 async function get_resident_parcels_by_status(resident_id, status){
@@ -221,5 +241,6 @@ module.exports = {
     update_location,
     discard_parcel,
     get_parcel,
+    get_route_info,
     get_resident_parcels_by_status
 }

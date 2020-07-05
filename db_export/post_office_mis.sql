@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jun 05, 2020 at 07:07 PM
+-- Generation Time: Jul 04, 2020 at 06:20 PM
 -- Server version: 10.1.38-MariaDB
 -- PHP Version: 7.3.2
 
@@ -61,6 +61,12 @@ SELECT detailed_reg_posts.id, receiver_id, receiver_name, sender_id, sender_name
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `completed_reg_posts_sent` (IN `in_code` VARCHAR(5), IN `in_status` ENUM('delivered','sent-back','failed'))  NO SQL
 SELECT detailed_reg_posts.id, sender_id, sender_name, receiver_id, receiver_name, speed_post, current_area, current_code, last_update, delivery_attempts_receiver, delivery_attempts_sender, delivered_datetime FROM `detailed_reg_posts`, `addresses` WHERE status=in_status AND last_update BETWEEN DATE_SUB(CURDATE(), INTERVAL 90 DAY) AND CURDATE() AND addresses.id = sender_id AND addresses.postal_code=in_code ORDER BY last_update DESC$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `parcel_route` (IN `in_id` INT)  NO SQL
+SELECT postal_areas.name AS name, location AS code, updated_at FROM parcels_route_info, postal_areas WHERE parcel_id=in_id AND location=postal_areas.code ORDER BY updated_at DESC$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `reg_post_route` (IN `in_id` INT)  NO SQL
+SELECT postal_areas.name AS name, location AS code, updated_at, direction FROM reg_posts_route_info, postal_areas WHERE reg_post_id=in_id AND location=postal_areas.code ORDER BY updated_at DESC$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `resident_active_parcels` (IN `resident_id` INT)  NO SQL
 SELECT id, receiver_name, description, current_location, last_update, postal_areas.name AS posted_area_name, posted_location AS posted_area_code, posted_datetime, delivery_attempts FROM parcels, postal_areas WHERE receiver_id = resident_id AND status IN ('on-route-receiver', 'receiver-unavailable') AND postal_areas.code = posted_location ORDER BY last_update DESC$$
@@ -126,7 +132,8 @@ INSERT INTO `addresses` (`id`, `resident_key`, `number`, `street`, `sub_area`, `
 (10, 'SY0F42', '102/C', 'Galle Rd', NULL, '10400'),
 (11, 'B66RLU', '70/2/1', 'james pieris road', 'rawathawatta', '10400'),
 (12, 'BM9ZTO', '140/C', '2nd Cross Street', 'Diyatha Uyana', '12100'),
-(13, 'SNRDYE', '226/1', 'Hill Road', 'Pahala Yaya', '90000');
+(13, 'SNRDYE', '226/1', 'Hill Road', 'Pahala Yaya', '90000'),
+(14, 'TRXL8T', '50/3', NULL, 'New town', '20800');
 
 -- --------------------------------------------------------
 
@@ -169,20 +176,6 @@ CREATE TABLE `detailed_addresses` (
 -- (See below for the actual view)
 --
 CREATE TABLE `detailed_parcels` (
-`id` int(11)
-,`receiver_id` int(11)
-,`receiver_name` varchar(50)
-,`payment` decimal(6,2)
-,`description` varchar(1024)
-,`status` enum('on-route-receiver','receiver-unavailable','delivered','failed')
-,`current_area` varchar(20)
-,`current_code` varchar(5)
-,`last_update` datetime
-,`posted_location` varchar(5)
-,`posted_datetime` datetime
-,`reached_receiver_po` datetime
-,`delivery_attempts` int(11)
-,`delivered_datetime` datetime
 );
 
 -- --------------------------------------------------------
@@ -238,7 +231,8 @@ INSERT INTO `money_orders` (`id`, `sender_name`, `receiver_name`, `receiver_post
 (1, 'A.B.C. Perera', 'John Hamish Watson', '10400', '500.00', 'delivered', '80.50', 6, '11160', '2020-06-02 07:39:00', '$2b$10$jC9z8WDD0TxTyOldcD4q1eeMsA6.ZHREJOWl7KjPi5Jez8iKlZBEO', '2020-06-03 11:39:12'),
 (2, 'C.H. Mary Campbell', 'Colum Mckenzie', '90000', '1825.50', 'returned', '156.20', 6, '10400', '2020-06-02 07:52:00', '$2b$10$zNjz6qbPF2Efsm4WiDow/.MZ8SmwXxN5L5q83ate.ZzROq2v3GRy2', '2020-06-05 22:10:52'),
 (3, 'Lindsey Morgan', 'I.J. Sarath', '10400', '3645.50', 'created', '25.00', 2, '10400', '2020-06-05 19:30:07', '$2b$10$t.EJI.f2de7cU36loFv25eDgtpwpqlPfwdkcIR6TqqVadmrj2X08u', NULL),
-(4, 'E. D. C. Jayaratna', 'M. N. Wanigarathne', '20800', '784.75', 'created', '63.90', 5, '10400', '2020-06-05 22:35:53', '$2b$10$E60cGmJdbTh2yDDHsLmRa.WmEHetl96Fw01buTSg1SKr.vzFn1Iee', NULL);
+(4, 'E. D. C. Jayaratna', 'M. N. Wanigarathne', '20800', '784.75', 'created', '63.90', 5, '10400', '2020-06-05 22:35:53', '$2b$10$E60cGmJdbTh2yDDHsLmRa.WmEHetl96Fw01buTSg1SKr.vzFn1Iee', NULL),
+(5, 'A.B.C. Perera', 'Mary', '10400', '1825.50', 'created', '75.00', 2, '10400', '2020-06-30 23:25:35', '$2b$10$UfmMY6gNUehSy8uQBckiU.HXO6f1jqw8Pu6uFPEO2uqiELzA.xJNS', NULL);
 
 -- --------------------------------------------------------
 
@@ -259,8 +253,8 @@ CREATE TABLE `normal_posts` (
 --
 
 INSERT INTO `normal_posts` (`address_id`, `on_route_count`, `delivered_count`, `failed_delivery_count`, `total_price`) VALUES
-(1, 18, 0, 2, '59.37'),
-(2, 2, 0, 1, '0.00'),
+(1, 5, 6, 2, '59.37'),
+(2, 3, 0, 1, '22.00'),
 (3, 5, 0, 0, '0.00'),
 (5, 1, 0, 0, '0.00');
 
@@ -281,7 +275,6 @@ CREATE TABLE `parcels` (
   `last_update` datetime NOT NULL,
   `posted_location` varchar(5) NOT NULL,
   `posted_datetime` datetime NOT NULL,
-  `reached_receiver_po` datetime DEFAULT NULL,
   `delivery_attempts` int(11) NOT NULL DEFAULT '0',
   `delivered_datetime` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
@@ -290,38 +283,37 @@ CREATE TABLE `parcels` (
 -- Dumping data for table `parcels`
 --
 
-INSERT INTO `parcels` (`id`, `receiver_id`, `receiver_name`, `payment`, `description`, `status`, `current_location`, `last_update`, `posted_location`, `posted_datetime`, `reached_receiver_po`, `delivery_attempts`, `delivered_datetime`) VALUES
-(1, 2, 'John W.', '170.00', NULL, 'delivered', '10400', '2020-05-12 09:10:00', '01000', '2020-05-09 07:25:13', '2020-05-11 14:23:44', 1, '2020-05-12 09:10:00'),
-(2, 4, 'Alice', '96.20', NULL, 'on-route-receiver', '80300', '2020-05-12 13:00:09', '10400', '2020-05-09 07:32:11', NULL, 0, NULL),
-(3, 7, 'Clark', '40.00', NULL, 'failed', '10400', '2020-05-13 17:12:24', '10400', '2020-05-10 08:58:40', '2020-05-10 08:58:40', 3, NULL),
-(4, 9, 'Abeyratna', '225.50', NULL, 'receiver-unavailable', '81000', '2020-05-15 19:35:58', '01000', '2020-05-13 17:08:34', '2020-05-15 12:21:46', 1, NULL),
-(5, 10, 'William', '384.15', 'e-bay order', 'on-route-receiver', '80000', '2020-05-17 14:06:13', '82000', '2020-05-15 07:26:00', NULL, 0, NULL),
-(6, 2, 'Sam W.', '95.00', NULL, 'on-route-receiver', '10400', '2020-05-17 14:08:53', '12100', '2020-05-15 13:17:34', '2020-05-17 14:08:53', 0, NULL),
-(7, 11, 'Mr. Bates', '205.00', 'FRAGILE !!!', 'on-route-receiver', '90000', '2020-05-19 08:16:51', '90000', '2020-05-19 08:16:51', NULL, 0, NULL);
+INSERT INTO `parcels` (`id`, `receiver_id`, `receiver_name`, `payment`, `description`, `status`, `current_location`, `last_update`, `posted_location`, `posted_datetime`, `delivery_attempts`, `delivered_datetime`) VALUES
+(1, 2, 'John W.', '170.00', NULL, 'delivered', '10400', '2020-05-12 09:10:00', '01000', '2020-05-09 07:25:13', 1, '2020-05-12 09:10:00'),
+(2, 4, 'Alice', '96.20', NULL, 'on-route-receiver', '80300', '2020-05-12 13:00:09', '10400', '2020-05-09 07:32:11', 0, NULL),
+(3, 7, 'Clark', '40.00', NULL, 'failed', '10400', '2020-05-13 17:12:24', '10400', '2020-05-10 08:58:40', 3, NULL),
+(4, 9, 'Abeyratna', '225.50', NULL, 'receiver-unavailable', '81000', '2020-05-15 19:35:58', '01000', '2020-05-13 17:08:34', 1, NULL),
+(5, 10, 'William', '384.15', 'e-bay order', 'on-route-receiver', '80000', '2020-05-17 14:06:13', '82000', '2020-05-15 07:26:00', 0, NULL),
+(6, 2, 'Sam W.', '95.00', NULL, 'on-route-receiver', '10400', '2020-05-17 14:08:53', '12100', '2020-05-15 13:17:34', 0, NULL),
+(7, 11, 'Mr. Bates', '205.00', 'FRAGILE !!!', 'on-route-receiver', '90000', '2020-05-19 08:16:51', '90000', '2020-05-19 08:16:51', 0, NULL);
+
+-- --------------------------------------------------------
 
 --
--- Triggers `parcels`
+-- Table structure for table `parcels_route_info`
 --
-DELIMITER $$
-CREATE TRIGGER `insert_reached_receiver_po` BEFORE INSERT ON `parcels` FOR EACH ROW BEGIN
-	DECLARE receiver_po VARCHAR(5);
-    SELECT postal_code INTO @receiver_po FROM detailed_addresses 		WHERE id=NEW.receiver_id;
-    IF @receiver_po=NEW.posted_location THEN
-    	SET NEW.reached_receiver_po = NEW.posted_datetime;
-    END IF;
-END
-$$
-DELIMITER ;
-DELIMITER $$
-CREATE TRIGGER `set_reached_receiver_po` BEFORE UPDATE ON `parcels` FOR EACH ROW BEGIN
-	DECLARE receiver_po VARCHAR(5);
-    SELECT postal_code INTO @receiver_po FROM detailed_addresses 		WHERE id=NEW.receiver_id;
-    IF @receiver_po=NEW.current_location AND OLD.reached_receiver_po is NULL THEN
-    	SET NEW.reached_receiver_po = NEW.last_update;
-    END IF;
-END
-$$
-DELIMITER ;
+
+CREATE TABLE `parcels_route_info` (
+  `parcel_id` int(11) NOT NULL,
+  `location` varchar(5) NOT NULL,
+  `updated_at` datetime NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+--
+-- Dumping data for table `parcels_route_info`
+--
+
+INSERT INTO `parcels_route_info` (`parcel_id`, `location`, `updated_at`) VALUES
+(4, '00400', '2020-05-13 20:38:14'),
+(4, '10400', '2020-05-14 07:06:00'),
+(4, '80300', '2020-05-14 10:22:44'),
+(4, '80000', '2020-05-14 15:34:11'),
+(4, '81000', '2020-05-15 12:21:46');
 
 -- --------------------------------------------------------
 
@@ -388,25 +380,26 @@ CREATE TABLE `registered_posts` (
 
 INSERT INTO `registered_posts` (`id`, `sender_id`, `sender_name`, `receiver_id`, `receiver_name`, `price`, `speed_post`, `status`, `current_location`, `posted_datetime`, `last_update`, `delivery_attempts_receiver`, `delivery_attempts_sender`, `delivered_datetime`) VALUES
 (1, 1, 'Kamal Perera', 2, 'John W.', '60.00', 0, 'delivered', '10400', '2020-04-18 13:41:22', '2020-04-21 23:38:48', 2, 0, '2020-04-21 23:38:48'),
-(2, 3, 'Silva', 1, 'A. Peter', '44.25', 0, 'on-route-receiver', '20400', '2020-04-20 19:44:52', '2020-04-21 09:36:00', 0, 0, NULL),
+(2, 3, 'Silva', 1, 'A. Peter', '44.25', 0, 'on-route-receiver', '20400', '2020-04-20 19:44:52', '2020-04-20 19:44:52', 0, 0, NULL),
 (3, 2, 'Mary W.', 3, 'Connor', '88.75', 0, 'sent-back', '10400', '2020-04-20 07:23:55', '2020-04-24 14:41:20', 1, 1, '2020-04-24 14:41:20'),
 (4, 1, 'Tom', 4, 'A. Cooray', '97.50', 0, 'on-route-receiver', '20400', '2020-04-22 16:45:04', '2020-05-02 16:45:04', 0, 0, NULL),
 (5, 4, 'Wells', 2, 'John W.', '125.80', 0, 'sent-back', '80000', '2020-04-23 16:16:28', '2020-04-27 06:28:19', 3, 1, '2020-04-27 06:28:19'),
-(6, 5, 'Pieris', 7, 'Watson', '65.30', 0, 'failed', '11000', '2020-04-24 11:24:26', '2020-04-30 12:52:31', 3, 2, NULL),
-(7, 7, 'Watson', 6, 'Krishna', '148.65', 0, 'delivered', '40000', '2020-04-25 07:08:20', '2020-04-29 10:15:14', 1, 0, '2020-04-29 10:15:14'),
-(8, 2, 'Mary W.', 8, 'Frank', '55.48', 0, 'failed', '10400', '2020-04-25 17:26:46', '2020-05-02 08:11:00', 3, 3, NULL),
-(9, 9, 'Weerakkody', 2, 'John W.', '105.00', 0, 'failed', '81000', '2020-04-27 05:08:29', '2020-05-04 12:40:10', 3, 2, NULL),
-(10, 2, 'John W.', 10, 'Abeyratna', '40.50', 0, 'delivered', '10400', '2020-04-28 15:19:11', '2020-04-29 10:00:00', 1, 0, '2020-04-29 10:00:00'),
-(11, 6, 'Don', 2, 'Sam W.', '238.00', 0, 'sender-unavailable', '40000', '2020-04-29 13:50:45', '2020-05-04 14:27:13', 3, 1, NULL),
-(12, 2, 'Mary W.', 3, 'Felicia', '115.25', 0, 'sender-unavailable', '10400', '2020-04-29 09:14:00', '2020-05-05 13:23:15', 2, 1, NULL),
-(13, 2, 'Sam W.', 4, 'Cooray', '68.60', 0, 'on-route-sender', '80300', '2020-04-30 18:44:23', '2020-05-05 17:45:24', 3, 0, NULL),
-(14, 8, 'Paul', 2, 'Dean W.', '73.00', 0, 'on-route-sender', '11000', '2020-05-01 09:15:25', '2020-05-06 06:08:49', 2, 0, NULL),
-(15, 2, 'Mary W.', 4, 'Gunasingha', '54.75', 0, 'receiver-unavailable', '80000', '2020-05-02 08:18:12', '2020-05-05 13:51:45', 1, 0, NULL),
-(16, 6, 'Drupal', 2, 'Sam W.', '267.00', 0, 'receiver-unavailable', '10400', '2020-05-02 06:39:22', '2020-05-06 13:25:39', 1, 0, NULL),
-(17, 9, 'Weerakkody', 2, 'Dean W.', '324.50', 1, 'on-route-receiver', '80000', '2020-05-05 06:11:54', '2020-05-06 10:21:00', 0, 0, NULL),
-(18, 2, 'John W.', 5, 'Peiris', '93.50', 0, 'on-route-receiver', '01000', '2020-05-06 11:50:37', '2020-05-06 19:45:05', 0, 0, NULL),
-(19, 1, 'Kamal Perera', 7, 'Silva', '106.50', 0, 'on-route-receiver', '11000', '2020-05-06 16:40:30', '2020-05-07 07:53:22', 0, 0, NULL),
-(20, 3, 'Sarath', 11, 'Edison', '244.90', 1, 'on-route-receiver', '01000', '2020-05-08 23:39:51', '2020-05-09 16:01:25', 0, 0, NULL);
+(6, 5, 'Pieris', 7, 'Watson', '65.30', 0, 'failed', '11000', '2020-04-27 11:24:26', '2020-05-08 12:52:31', 3, 2, NULL),
+(7, 7, 'Watson', 6, 'Krishna', '148.65', 0, 'delivered', '40000', '2020-04-29 07:08:20', '2020-05-07 10:15:14', 1, 0, '2020-05-07 10:15:14'),
+(8, 2, 'Mary W.', 8, 'Frank', '55.48', 0, 'failed', '10400', '2020-04-30 17:26:46', '2020-05-09 08:11:00', 3, 3, NULL),
+(9, 9, 'Weerakkody', 2, 'John W.', '105.00', 0, 'failed', '81000', '2020-05-01 05:08:29', '2020-05-13 12:40:10', 3, 2, NULL),
+(10, 2, 'John W.', 10, 'Abeyratna', '40.50', 0, 'delivered', '10400', '2020-05-04 15:19:11', '2020-05-05 10:00:00', 1, 0, '2020-05-05 10:00:00'),
+(11, 6, 'Don', 2, 'Sam W.', '238.00', 0, 'sender-unavailable', '40000', '2020-05-05 08:17:33', '2020-05-13 14:27:13', 3, 1, NULL),
+(12, 2, 'Mary W.', 3, 'Felicia', '115.25', 0, 'sender-unavailable', '10400', '2020-05-14 09:14:00', '2020-05-20 13:23:15', 2, 1, NULL),
+(13, 2, 'Sam W.', 4, 'Cooray', '68.60', 0, 'on-route-sender', '80300', '2020-05-14 18:44:23', '2020-05-19 17:45:24', 3, 0, NULL),
+(14, 8, 'Paul', 2, 'Dean W.', '73.00', 0, 'on-route-sender', '11000', '2020-05-16 09:15:25', '2020-05-23 06:08:49', 2, 0, NULL),
+(15, 2, 'Mary W.', 4, 'Gunasingha', '54.75', 0, 'receiver-unavailable', '80000', '2020-05-17 08:18:12', '2020-05-20 13:51:45', 1, 0, NULL),
+(16, 6, 'Drupal', 2, 'Sam W.', '267.00', 0, 'receiver-unavailable', '10400', '2020-05-21 06:39:22', '2020-05-24 22:19:37', 1, 0, NULL),
+(17, 9, 'Weerakkody', 2, 'Dean W.', '324.50', 1, 'on-route-receiver', '80000', '2020-05-25 06:11:54', '2020-05-26 10:21:00', 0, 0, NULL),
+(18, 2, 'John W.', 5, 'Peiris', '93.50', 0, 'on-route-receiver', '01000', '2020-05-26 11:50:37', '2020-05-29 19:45:05', 0, 0, NULL),
+(19, 1, 'Kamal Perera', 7, 'Silva', '106.50', 0, 'on-route-receiver', '11000', '2020-05-31 16:40:30', '2020-06-02 07:53:22', 0, 0, NULL),
+(20, 3, 'Sarath', 11, 'Edison', '244.90', 1, 'on-route-receiver', '01000', '2020-06-04 23:39:51', '2020-06-05 22:17:48', 0, 0, NULL),
+(21, 9, 'A.B.C. Silva', 13, 'Ferguson', '258.80', 1, 'on-route-receiver', '80000', '2020-06-30 23:21:48', '2020-07-04 08:17:22', 0, 0, NULL);
 
 --
 -- Triggers `registered_posts`
@@ -452,6 +445,34 @@ CREATE TABLE `reg_posts_receiver_details` (
 ,`delivery_attempts_sender` int(11)
 ,`delivered_datetime` datetime
 );
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `reg_posts_route_info`
+--
+
+CREATE TABLE `reg_posts_route_info` (
+  `reg_post_id` int(11) NOT NULL,
+  `location` varchar(5) NOT NULL,
+  `updated_at` datetime NOT NULL,
+  `direction` tinyint(1) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+--
+-- Dumping data for table `reg_posts_route_info`
+--
+
+INSERT INTO `reg_posts_route_info` (`reg_post_id`, `location`, `updated_at`, `direction`) VALUES
+(21, '80000', '2020-07-02 19:53:36', 0),
+(14, '11000', '2020-05-16 16:07:42', 0),
+(14, '01000', '2020-05-17 12:49:00', 0),
+(14, '00400', '2020-05-17 19:11:41', 0),
+(14, '10400', '2020-05-18 09:36:12', 0),
+(14, '10400', '2020-05-22 08:48:19', 1),
+(14, '11000', '2020-05-23 06:08:49', 1),
+(21, '10400', '2020-07-02 22:50:09', 0),
+(21, '80000', '2020-07-04 08:17:22', 0);
 
 -- --------------------------------------------------------
 
@@ -569,6 +590,13 @@ ALTER TABLE `parcels`
   ADD KEY `posted_location` (`posted_location`);
 
 --
+-- Indexes for table `parcels_route_info`
+--
+ALTER TABLE `parcels_route_info`
+  ADD KEY `parcel_id` (`parcel_id`),
+  ADD KEY `location` (`location`);
+
+--
 -- Indexes for table `postal_areas`
 --
 ALTER TABLE `postal_areas`
@@ -584,6 +612,13 @@ ALTER TABLE `registered_posts`
   ADD KEY `current_location` (`current_location`);
 
 --
+-- Indexes for table `reg_posts_route_info`
+--
+ALTER TABLE `reg_posts_route_info`
+  ADD KEY `reg_post_id` (`reg_post_id`),
+  ADD KEY `location` (`location`);
+
+--
 -- AUTO_INCREMENT for dumped tables
 --
 
@@ -591,7 +626,7 @@ ALTER TABLE `registered_posts`
 -- AUTO_INCREMENT for table `addresses`
 --
 ALTER TABLE `addresses`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT for table `admins`
@@ -603,7 +638,7 @@ ALTER TABLE `admins`
 -- AUTO_INCREMENT for table `money_orders`
 --
 ALTER TABLE `money_orders`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `parcels`
@@ -615,7 +650,7 @@ ALTER TABLE `parcels`
 -- AUTO_INCREMENT for table `registered_posts`
 --
 ALTER TABLE `registered_posts`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
 
 --
 -- Constraints for dumped tables
@@ -649,12 +684,26 @@ ALTER TABLE `parcels`
   ADD CONSTRAINT `parcels_ibfk_3` FOREIGN KEY (`posted_location`) REFERENCES `postal_areas` (`code`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
+-- Constraints for table `parcels_route_info`
+--
+ALTER TABLE `parcels_route_info`
+  ADD CONSTRAINT `parcels_route_info_ibfk_1` FOREIGN KEY (`parcel_id`) REFERENCES `parcels` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `parcels_route_info_ibfk_2` FOREIGN KEY (`location`) REFERENCES `postal_areas` (`code`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
 -- Constraints for table `registered_posts`
 --
 ALTER TABLE `registered_posts`
   ADD CONSTRAINT `registered_posts_ibfk_1` FOREIGN KEY (`sender_id`) REFERENCES `addresses` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `registered_posts_ibfk_2` FOREIGN KEY (`receiver_id`) REFERENCES `addresses` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `registered_posts_ibfk_3` FOREIGN KEY (`current_location`) REFERENCES `postal_areas` (`code`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `reg_posts_route_info`
+--
+ALTER TABLE `reg_posts_route_info`
+  ADD CONSTRAINT `reg_posts_route_info_ibfk_1` FOREIGN KEY (`reg_post_id`) REFERENCES `registered_posts` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `reg_posts_route_info_ibfk_2` FOREIGN KEY (`location`) REFERENCES `postal_areas` (`code`) ON DELETE CASCADE ON UPDATE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

@@ -48,6 +48,10 @@ function call_procedure(proc_name, params){
     return DB.query(sql, params);
 }
 
+function execute_transaction(query_list){
+    return DB.transaction(query_list);
+}
+
 module.exports = {
-    select, insert, update, remove, call_procedure
+    select, insert, update, remove, call_procedure, execute_transaction
 };

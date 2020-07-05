@@ -53,15 +53,27 @@ async function update_location(reg_post_id, post_office){
     }
     else{
         let dt_str = helper.current_dt_str();
+        let direction = regpost_result.query_output[0].status === 'on-route-sender';
+        let update_query = {
+            statement: `UPDATE registered_posts SET current_location = ?, last_update = ? WHERE id = ?`,
+            params: [post_office, dt_str, reg_post_id]
+        };
 
-        let update_str = 'current_location = ?, last_update = ?';
-        let params = [post_office, dt_str, reg_post_id];
-        console.log(params);
-        let update_result = await Model.update('registered_posts', update_str, 'id = ?', params);
-        console.log(update_result);
-        if(update_result.query_error){
-            return {output: null, error: update_result.query_error.message};
-        }
+        let insert_query = {
+            statement: `INSERT INTO reg_posts_route_info SET ?`,
+            params: {reg_post_id, location: post_office, updated_at: dt_str, direction}
+        };
+
+        // let update_str = 'current_location = ?, last_update = ?';
+        // let params = [post_office, dt_str, reg_post_id];
+        // console.log(params);
+        // let update_result = await Model.update('registered_posts', update_str, 'id = ?', params);
+        // console.log(update_result);
+        // if(update_result.query_error){
+        //     return {output: null, error: update_result.query_error.message};
+        // }
+        let trans_result = await Model.execute_transaction([update_query, insert_query]);
+        console.log(trans_result);
         return {output: {last_location: post_office, last_update: dt_str}, error: null};
     }
 }
@@ -103,14 +115,28 @@ async function send_back(reg_post_id, post_office){
     let attempts_rec = regpost_result.query_output[0].delivery_attempts_receiver;    
     
     if(status === 'receiver-unavailable' && attempts_rec > 0 && current_location === post_office){
-        let dt_str = helper.current_dt_str();    
-        let update_str = 'status = ?, last_update = ?';
-        let params = ['on-route-sender', dt_str, reg_post_id];
-        let update_result = await Model.update('registered_posts', update_str, 'id = ?', params);
-        console.log(update_result);
-        if(update_result.query_error){
-            return {output: null, error: update_result.query_error.message};
-        }
+        let dt_str = helper.current_dt_str();
+
+        let update_query = {
+            statement: `UPDATE registered_posts SET 'status = ?, last_update = ?' WHERE id = ?`,
+            params: ['on-route-sender', dt_str, reg_post_id]
+        };
+
+        let insert_query = {
+            statement: `INSERT INTO reg_posts_route_info SET ?`,
+            params: {reg_post_id, location: post_office, updated_at: dt_str, direction: '1'}
+        };
+
+        let trans_result = await Model.execute_transaction([update_query, insert_query]);
+        console.log(trans_result);
+
+        // let update_str = 'status = ?, last_update = ?';
+        // let params = ['on-route-sender', dt_str, reg_post_id];
+        // let update_result = await Model.update('registered_posts', update_str, 'id = ?', params);
+        // console.log(update_result);
+        // if(update_result.query_error){
+        //     return {output: null, error: update_result.query_error.message};
+        // }
         return {output: {status: 'on-route-sender', last_update: dt_str}, error: null};
     }
     else{
@@ -242,6 +268,47 @@ async function get_reg_post(reg_post_id){
     return {output: reg_post_obj, error: null};
 }
 
+async function get_route_info(id){
+    // let reg_post_result = await Model.select('registered_posts', 'receiver_id, status', 'id = ?', id);
+    // console.log(reg_post_result);
+    // if(!reg_post_result.query_output.length){
+    //     return {output: null, error: 'No registered post exists by the given id'};
+    // }
+
+    // let rec_postal_code;
+    // let status_arr = ['on-route-receiver', 'receiver-unavailable', 'delivered'];
+    // if( !status_arr.includes(reg_post_result.query_output[0].status) ){
+    //     let address_result = await Model.select('addresses', 'postal_code', 'id = ?', reg_post_result.query_output[0].receiver_id);
+    //     rec_postal_code = address_result.query_output[0].postal_code;
+    // }
+
+    let route_info = {return_route: [], delivery_route: []};
+    // let index = 0;
+    let route_result = await Model.call_procedure('reg_post_route', id);
+    let route_result_len = route_result.query_output[0].length;
+
+    if (route_result_len === 0){
+        return {output: route_info, error: null};
+    }
+
+    for (let i = 0; i < route_result_len; i++) {
+        const record = route_result.query_output[0][i];
+        if(record.direction === 1){
+            route_info['return_route'].push([record.name, record.code, helper.dt_local(record.updated_at)]);
+        }
+        else{
+            route_info['delivery_route'].push([record.name, record.code, helper.dt_local(record.updated_at)]); 
+        }
+    }
+
+    // for (let j = index; j < route_result.query_output.length; j++) {
+    //     const record = route_result.query_output[j];
+    //     route_info['delivery_route'].push([record.location, helper.dt_local(record.updated_at)]);
+    // }
+
+    return {output: route_info, error: null};
+}
+
 async function get_receiver_reg_posts(receiver_id){
     let result = await Model.select('reg_posts_sender_details', '*', 'receiver_id = ?', receiver_id);
     console.log(result);
@@ -351,6 +418,7 @@ module.exports = {
     deliver_to_sender,
     discard_reg_post,
     get_reg_post,
+    get_route_info,
     get_receiver_reg_posts,
     get_sender_reg_posts,
     get_resident_reg_posts_by_status

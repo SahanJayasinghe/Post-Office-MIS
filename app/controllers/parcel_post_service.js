@@ -102,6 +102,30 @@ router.get('/:id', auth_post_office, async (req, res) => {
     }
 });
 
+router.get('/route-info/:id', auth_post_office, async (req, res) => {
+    try {
+        console.log(req.params.id);
+        let id_check = /^\d+$/.test(req.params.id);
+        if( !id_check) {
+            return res.status(400).send('Invalid id');
+        }
+
+        let result = await Parcel_Post.get_route_info(req.params.id);
+        console.log(result);
+        if(result.error){
+            return res.status(400).send(result.error);
+        }
+        else{
+            res.status(200).send(result.output);
+        }
+    }
+    catch (err) {
+        console.log('Route handler catch block');
+        console.log(err);
+        res.status(500).send('Server could not perform the action');
+    }
+});
+
 router.put('/location-update', auth_post_office, async (req, res) => {
     try {
         // body contains {id: '12', post_office: '10400'}

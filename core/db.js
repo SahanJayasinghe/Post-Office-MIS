@@ -74,6 +74,80 @@ function query(sql, args){
     });
 }
 
+function transaction(query_list){    
+    return new Promise((resolve, reject) => {
+        connection.beginTransaction(function(err) {
+            if (err) { return reject(err); }
+
+            let results = [];
+            connection.query(query_list[0].statement, query_list[0].params, function (error, resultQ) {
+                if (error) {
+                    return connection.rollback(function() {
+                        // console.log(error);
+                        reject(error);
+                    });
+                }
+                results.push(resultQ);
+                console.log("1st query completed");
+                // console.log(results);
+
+                connection.query(query_list[1].statement, query_list[1].params, function (error, resultQ) {
+                    if (error) {
+                        return connection.rollback(function() {
+                            // console.log(error);
+                            reject(error);
+                        });
+                    }
+                    results.push(resultQ);
+                    console.log("2nd query completed");
+                    // console.log(results);
+                    
+                    connection.commit(function(err) {
+                        if (err) {
+                            return connection.rollback(function() {
+                                reject(err);
+                            });
+                        }
+                        // console.log('success!');
+                        resolve(results);
+                    });
+                });
+            });
+        });
+    })
+}
+
+// return new Promise((resolve, reject) => {
+//     let results = [];
+
+//     connection.beginTransaction((trans_err) => {
+//         if(trans_err){
+//             reject(trans_err);
+//         }
+        
+//         for (const query of query_list) {
+//             console.log(query.statement);
+//             console.log(query.params);
+//             connection.query(query.statement, query.params, (err, resultQ) => {
+//                 if(err){
+//                     console.log(err);
+//                     connection.rollback((rollback_err) => {
+//                         reject(rollback_err);
+//                     })
+//                 }
+//                 results.push(resultQ);
+//             })
+//         }
+
+//         connection.commit((commit_err) => {
+//             if(commit_err){
+//                 reject(commit_err);
+//             }
+//             resolve(results);
+//         })
+//     })
+// })
+
 function disconnect(){
     return new Promise((resolve, reject) => {
         connection.end( err => {
@@ -88,6 +162,7 @@ function disconnect(){
 module.exports = {
     handleConnection,
     query,
+    transaction,
     connect,
     disconnect
 };
