@@ -7,7 +7,8 @@ const db_config = {
     host: 'localhost',
     user: 'root',
     password: '',
-    database: db_name
+    database: db_name,
+    timezone: '+05:30'
 };
 
 let connection;

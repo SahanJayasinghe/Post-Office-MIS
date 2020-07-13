@@ -5,7 +5,7 @@ const Registered_Post = require('../models/Registered_Post');
 const helper = require('../../core/helper');
 const auth_post_office = require('../../middleware/auth_post_office');
 
-router.post('/address', auth_post_office, async (req, res) => {
+router.post('/address', auth_post_office, async (req, res, next) => {
     try {
         //req.body contains {receiver, sender}
         // receiver = {number: 46, postal_code: 11160}
@@ -53,9 +53,10 @@ router.post('/address', auth_post_office, async (req, res) => {
         }
     } 
     catch (err) {
-        console.log('Route handler catch block');
-        console.log(err);
-        res.status(500).send('Server could not perform the action');
+        console.log('registered-post-service/address/POST catch block');
+        next(err);
+        // console.log(err);
+        // res.status(500).send('Server could not perform the action');
     }
 });
 

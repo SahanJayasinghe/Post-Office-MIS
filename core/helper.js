@@ -1,22 +1,22 @@
 function dt_local(dtISO){
     let dt = new Date(dtISO);
-    let date = dt.toLocaleDateString().split('/');
-    let time = dt.toTimeString().split(' ');
+    let date = dt.toLocaleDateString("en-US", {timeZone: "Asia/Colombo"}).split('/');
+    let time = dt.toTimeString("en-US", {timeZone: "Asia/Colombo"}).split(' ');
     let dt_str = `${date[2]}-${date[0]}-${date[1]} ${time[0]}`;
     return dt_str;
 }
 
 function current_dt_str(){
     let dt = new Date();
-    let date = dt.toLocaleDateString().split('/');
-    let time = dt.toTimeString().split(' ');
+    let date = dt.toLocaleDateString("en-US", {timeZone: "Asia/Colombo"}).split('/');
+    let time = dt.toTimeString("en-US", {timeZone: "Asia/Colombo"}).split(' ');
     let dt_str = `${date[2]}-${date[0]}-${date[1]} ${time[0]}`;
     return dt_str;
 }
 
 function get_dt_str(dt_obj){
-    let date = dt_obj.toLocaleDateString().split('/');
-    let time = dt_obj.toTimeString().split(' ');
+    let date = dt_obj.toLocaleDateString("en-US", {timeZone: "Asia/Colombo"}).split('/');
+    let time = dt_obj.toTimeString("en-US", {timeZone: "Asia/Colombo"}).split(' ');
     let dt_str = `${date[2]}-${date[0]}-${date[1]} ${time[0]}`;
     return dt_str;
 }
@@ -176,10 +176,15 @@ function validate_datetime(date, time){
     return [true];
 }
 
+function get_sl_dt_obj(dt_obj){
+    let dt_str = dt_obj.toLocaleString("en-US", {timeZone: "Asia/Colombo"});
+    return new Date(dt_str);
+}
+
 function expiration_check(posted_dt_iso, expire_after){
-    let now = new Date();
-    let posted_dt = dt_local(posted_dt_iso);
-    let expired_dt = new Date(posted_dt);
+    let now = get_sl_dt_obj(new Date());
+    let expired_dt = get_sl_dt_obj(new Date(posted_dt_iso));
+    // let expired_dt = new Date(posted_dt);
     expired_dt.setMonth(expired_dt.getMonth() + expire_after);
     let is_expired = now.getTime() >= expired_dt.getTime();
     return [is_expired, get_dt_str(expired_dt)];

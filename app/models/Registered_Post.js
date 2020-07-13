@@ -78,19 +78,41 @@ async function update_location(reg_post_id, post_office){
     }
 }
 
-async function deliver_to_receiver(reg_post_id, post_office, status){
-    // status = delivered or receiver-unavailable or on-route-sender
+async function deliver(reg_post_id, post_office){
+    let reg_post_result = await Model.select('registered_posts', 'receiver_id, sender_id, status', 'id = ?', reg_post_id);
+    if (!reg_post_result.query_output.length) {
+        return {output: null, error: `Could not find a registered post record by the id ${reg_post_id}`};
+    }
+    let {status} = reg_post_result.query_output[0];
+    if (status === 'delivered') {
+        return {output: null, error: `This registered post is already delivered to receiver.`}
+    }
+    if (status === 'sent-back') {
+        return {output: null, error: `This registered post is already returned to sender.`}
+    }
+    if (status === 'failed') {
+        return {output: null, error: `This registered post is discarded by the sender's post office.`}
+    }
+
     let dt_str = helper.current_dt_str();
     let update_result = null;
 
-    if(status == 'delivered'){
-        let update_str = 'status = ?, current_location = ?, delivery_attempts_receiver = delivery_attempts_receiver + 1, delivered_datetime = ?';
-        let params = ['delivered', post_office, dt_str, reg_post_id];
+    if (['on-route-receiver', 'receiver-unavailable'].includes(status)) {
+        let receiver_result = await Model.select('addresses', 'postal_code', 'id = ?', reg_post_result.query_output[0].receiver_id);
+        if (receiver_result.query_output[0].postal_code !== post_office){
+            return {output: null, error: `Receiver's post office ${receiver_result.query_output[0].postal_code} is authorized to deliver this post.`};
+        }
+        let update_str = 'status = ?, current_location = ?, last_update = ?, delivery_attempts_receiver = delivery_attempts_receiver + 1, delivered_datetime = ?';
+        let params = ['delivered', post_office, dt_str, dt_str, reg_post_id];
         update_result = await Model.update('registered_posts', update_str, 'id = ?', params);
     }    
-    else{
-        let update_str = 'status = ?, current_location = ?, last_update = ?, delivery_attempts_receiver = delivery_attempts_receiver + 1';
-        let params = [status, post_office, dt_str, reg_post_id];
+    else if(['on-route-sender', 'sender-unavailable'].includes(status)) {
+        let sender_result = await Model.select('addresses', 'postal_code', 'id = ?', reg_post_result.query_output[0].sender_id);
+        if (sender_result.query_output[0].postal_code !== post_office){
+            return {output: null, error: `Sender's post office ${sender_result.query_output[0].postal_code} is authorized to deliver this post.`};
+        }
+        let update_str = 'status = ?, current_location = ?, last_update = ?, delivery_attempts_sender = delivery_attempts_sender + 1, delivered_datetime = ?';
+        let params = ['sent-back', post_office, dt_str, dt_str, reg_post_id];
         update_result = await Model.update('registered_posts', update_str, 'id = ?', params);
     }
     
@@ -151,19 +173,40 @@ async function send_back(reg_post_id, post_office){
     }    
 }
 
-async function deliver_to_sender(reg_post_id, post_office, status){
-    // status = sent-back or sender-unavailable or failed
+async function increment_attempts(reg_post_id, post_office){
+    let reg_post_result = await Model.select('registered_posts', 'receiver_id, sender_id, status', 'id = ?', reg_post_id);
+    if (!reg_post_result.query_output.length) {
+        return {output: null, error: `Could not find a registered post record by the id ${reg_post_id}`};
+    }
+    let {status} = reg_post_result.query_output[0];
+    if (status === 'delivered') {
+        return {output: null, error: `This registered post is already delivered to receiver.`}
+    }
+    if (status === 'sent-back') {
+        return {output: null, error: `This registered post is already returned to sender.`}
+    }
+    if (status === 'failed') {
+        return {output: null, error: `This registered post is discarded by the sender's post office.`}
+    }
     let dt_str = helper.current_dt_str();
     let update_result = null;
 
-    if(status == 'sent-back'){
-        let update_str = 'status = ?, current_location = ?, delivery_attempts_sender = delivery_attempts_sender + 1, delivered_datetime = ?';
-        let params = ['sent-back', post_office, dt_str, reg_post_id];
+    if (['on-route-receiver', 'receiver-unavailable'].includes(status)) {
+        let receiver_result = await Model.select('addresses', 'postal_code', 'id = ?', reg_post_result.query_output[0].receiver_id);
+        if (receiver_result.query_output[0].postal_code !== post_office){
+            return {output: null, error: `Receiver's post office ${receiver_result.query_output[0].postal_code} is authorized to handle delivery of this post.`};
+        }
+        let update_str = 'status = ?, current_location = ?, last_update = ?, delivery_attempts_receiver = delivery_attempts_receiver + 1';
+        let params = ['receiver-unavailable', post_office, dt_str, reg_post_id];
         update_result = await Model.update('registered_posts', update_str, 'id = ?', params);
     }
-    else{
+    else if(['on-route-sender', 'sender-unavailable'].includes(status)) {
+        let sender_result = await Model.select('addresses', 'postal_code', 'id = ?', reg_post_result.query_output[0].sender_id);
+        if (sender_result.query_output[0].postal_code !== post_office){
+            return {output: null, error: `Sender's post office ${sender_result.query_output[0].postal_code} is authorized to handle delivery of this post.`};
+        }
         let update_str = 'status = ?, current_location = ?, last_update = ?, delivery_attempts_sender = delivery_attempts_sender + 1';
-        let params = [status, post_office, dt_str, reg_post_id];
+        let params = ['sender-unavailable', post_office, dt_str, reg_post_id];
         update_result = await Model.update('registered_posts', update_str, 'id = ?', params);
     }
 
@@ -413,9 +456,9 @@ async function get_resident_reg_posts_by_status(resident_id, sent_or_received, s
 module.exports = {
     create_reg_post,
     update_location,
-    deliver_to_receiver,
+    deliver,
     send_back,
-    deliver_to_sender,
+    increment_attempts,
     discard_reg_post,
     get_reg_post,
     get_route_info,

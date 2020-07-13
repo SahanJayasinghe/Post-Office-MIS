@@ -74,6 +74,53 @@ async function update_location(parcel_id, post_office){
     }
 }
 
+async function deliver(parcel_id, post_office){
+    let parcel_result = await Model.select('parcels', 'receiver_id, status', 'id = ?', parcel_id);
+    if (!parcel_result.query_output.length) {
+        return {output: null, error: `Could not find a parcel post record by the id ${parcel_id}`};
+    }
+    let {status} = parcel_result.query_output[0];
+    if(status === 'delivered'){
+        return {output: null, error: `This parcel post is already delivered to receiver.`}
+    }
+    if (status === 'failed') {
+        return {output: null, error: `This parcel post is discarded by the receiver's post office.`}
+    }
+
+    let receiver_result = await Model.select('addresses', 'postal_code', 'id = ?', parcel_result.query_output[0].receiver_id);
+    if (receiver_result.query_output[0].postal_code !== post_office){
+        return {output: null, error: `Receiver's post office ${receiver_result.query_output[0].postal_code} is authorized to deliver this post.`};
+    }
+    let dt_str = helper.current_dt_str();
+    let update_str = 'status = ?, current_location = ?, last_update = ?, delivery_attempts_receiver = delivery_attempts_receiver + 1, delivered_datetime = ?';
+    let params = ['delivered', post_office, dt_str, dt_str, parcel_id];
+    let update_result = await Model.update('parcels', update_str, 'id = ?', params);
+    return {output: update_result.query_output, error: null};
+}
+
+async function increment_attempts(parcel_id, post_office){
+    let parcel_result = await Model.select('parcels', 'receiver_id, status', 'id = ?', parcel_id);
+    if (!parcel_result.query_output.length) {
+        return {output: null, error: `Could not find a parcel post record by the id ${parcel_id}`};
+    }
+    let {status} = parcel_result.query_output[0];
+    if(status === 'delivered'){
+        return {output: null, error: `This parcel post is already delivered to receiver.`}
+    }
+    if (status === 'failed') {
+        return {output: null, error: `This parcel post is discarded by the receiver's post office.`}
+    }
+    let receiver_result = await Model.select('addresses', 'postal_code', 'id = ?', parcel_result.query_output[0].receiver_id);
+    if (receiver_result.query_output[0].postal_code !== post_office){
+        return {output: null, error: `Receiver's post office ${receiver_result.query_output[0].postal_code} is authorized to deliver this post.`};
+    }
+    let dt_str = helper.current_dt_str();
+    let update_str = 'status = ?, current_location = ?, last_update = ?, delivery_attempts_receiver = delivery_attempts_receiver + 1';
+    let params = ['receiver-unavailable', post_office, dt_str, parcel_id];
+    let update_result = await Model.update('parcels', update_str, 'id = ?', params);
+    return {output: update_result.query_output, error: null};
+}
+
 async function discard_parcel(parcel_id, post_office){
     let columns = 'current_location, status, delivery_attempts';
     let parcel_result = await Model.select('parcels', columns, 'id = ?', parcel_id);
@@ -239,6 +286,8 @@ async function get_resident_parcels_by_status(resident_id, status){
 module.exports = {
     create_parcel_post,
     update_location,
+    deliver,
+    increment_attempts,
     discard_parcel,
     get_parcel,
     get_route_info,

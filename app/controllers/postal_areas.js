@@ -4,8 +4,8 @@ const router = express.Router();
 const Postal_Area = require('../models/Postal_Area');
 const auth_admin = require('../../middleware/auth_admin');
 
-router.get('/', async (req, res) => {
-    try {
+router.get('/', async (req, res, next) => {
+    try {        
         let result = await Postal_Area.get_all_postal_areas();
         debug(result);
 
@@ -17,9 +17,10 @@ router.get('/', async (req, res) => {
         }
     }
     catch (err) {
-        console.log('Route handler catch block');
-        console.log(err);
-        res.status(500).send('Server could not perform the action');
+        console.log('postal-areas/GET catch block');
+        next(err);
+        // console.log(err);
+        // res.status(500).send('Server could not perform the action');
     }
 });
 

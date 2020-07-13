@@ -34,7 +34,23 @@ async function create_normal_post(delivery_address_id, price){
     }
 }
 
-async function deliver_normal_post(delivery_address_id){
+async function deliver_normal_post(delivery_address_id, post_office){
+    let np_result = await Model.select('normal_posts', '*', 'address_id = ?', delivery_address_id);
+    if (!np_result.query_output.length) {
+        return {output: null, error: `There are no normal posts for the given address.`}
+    }
+    if (np_result.query_output[0].on_route_count === 0) {
+        return {output: null, error: `There are no normal posts for the given address.`}
+    }
+
+    let address_result = await Model.select('addresses', 'postal_code', 'id = ?', delivery_address_id);
+    if ( !address_result.query_output.length ) {
+        return {output: null, error: 'No address by the given id'};
+    }
+    else if (address_result.query_output[0].postal_code !== post_office) {
+        return {output: null, error: `Only the Receiver's Post Office ${address_result.query_output[0].postal_code} can deliver the letter`}
+    }
+    
     let update_str = 'on_route_count = on_route_count - 1, delivered_count = delivered_count + 1';
     let update_result = await Model.update('normal_posts', update_str, 'address_id = ?', delivery_address_id);
     if(update_result.query_error){
