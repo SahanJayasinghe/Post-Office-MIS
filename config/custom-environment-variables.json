@@ -1,5 +1,6 @@
 {
     "jwtPrivateKey": "po_mis_jwtKey",
+    "db_name": "po_mis_db_name",
     "db_host": "po_mis_db_host",
     "db_user": "po_mis_db_user",
     "db_password": "po_mis_db_password"

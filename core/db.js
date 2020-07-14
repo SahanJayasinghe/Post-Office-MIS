@@ -3,7 +3,7 @@ const config = require('config');
 const logger = require('./logger');
 const debug = require('debug')('po_mis:db');
 
-const db_name = config.get('db');
+const db_name = config.get('db_name');
 const db_config = {
     host: config.get('db_host'),
     user: config.get('db_user'),
