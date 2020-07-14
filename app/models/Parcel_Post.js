@@ -92,7 +92,7 @@ async function deliver(parcel_id, post_office){
         return {output: null, error: `Receiver's post office ${receiver_result.query_output[0].postal_code} is authorized to deliver this post.`};
     }
     let dt_str = helper.current_dt_str();
-    let update_str = 'status = ?, current_location = ?, last_update = ?, delivery_attempts_receiver = delivery_attempts_receiver + 1, delivered_datetime = ?';
+    let update_str = 'status = ?, current_location = ?, last_update = ?, delivery_attempts = delivery_attempts + 1, delivered_datetime = ?';
     let params = ['delivered', post_office, dt_str, dt_str, parcel_id];
     let update_result = await Model.update('parcels', update_str, 'id = ?', params);
     return {output: update_result.query_output, error: null};
@@ -115,7 +115,7 @@ async function increment_attempts(parcel_id, post_office){
         return {output: null, error: `Receiver's post office ${receiver_result.query_output[0].postal_code} is authorized to deliver this post.`};
     }
     let dt_str = helper.current_dt_str();
-    let update_str = 'status = ?, current_location = ?, last_update = ?, delivery_attempts_receiver = delivery_attempts_receiver + 1';
+    let update_str = 'status = ?, current_location = ?, last_update = ?, delivery_attempts = delivery_attempts + 1';
     let params = ['receiver-unavailable', post_office, dt_str, parcel_id];
     let update_result = await Model.update('parcels', update_str, 'id = ?', params);
     return {output: update_result.query_output, error: null};
@@ -130,10 +130,10 @@ async function discard_parcel(parcel_id, post_office){
     else if(!parcel_result.query_output.length){
         return {output: null, error: 'Parcel id does not exist'};
     }
-    
+
     let {status, current_location, delivery_attempts} = parcel_result.query_output[0];
     if (status === 'receiver-unavailable' && delivery_attempts > 0 && current_location === post_office){
-        let dt_str = helper.current_dt_str();    
+        let dt_str = helper.current_dt_str();
         let update_str = 'status = ?, last_update = ?';
         let params = ['failed', dt_str, parcel_id];
         let update_result = await Model.update('parcels', update_str, 'id = ?', params);
@@ -226,7 +226,7 @@ async function get_route_info(id){
     let route_list = [];
     for (let i = 0; i < route_info_len; i++) {
         const record = route_info.query_output[0][i];
-        route_list.push([record.name, record.code, dt_local(record.updated_at)]);        
+        route_list.push([record.name, record.code, dt_local(record.updated_at)]);
     }
     return {output: route_list, error: null}
 }
@@ -234,10 +234,10 @@ async function get_route_info(id){
 async function get_resident_parcels_by_status(resident_id, status){
     // status = 'delivering' | 'delivered' | 'failed'
     let proc_result;
-    (status == 'delivering') 
+    (status == 'delivering')
         ? proc_result = await Model.call_procedure('resident_active_parcels', resident_id)
         : proc_result = await Model.call_procedure('resident_completed_parcels', [resident_id, status]);
-    
+
     if(proc_result.query_error){
         return {output: null, error: proc_result.query_error.message};
     }

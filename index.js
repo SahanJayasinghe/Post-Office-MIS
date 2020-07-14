@@ -5,42 +5,37 @@ const helmet = require('helmet');
 const compression = require('compression');
 const https = require('https');
 const fs = require('fs');
-const DB = require('./core/db');
 require('./core/logger');
+const DB = require('./core/db');
+const cors = require('./middleware/cors');
 
 const app = express();
 app.use(helmet());
 app.use(compression());
-require('./core/routes')(app);
 
 if (!config.get('jwtPrivateKey')) {
     throw new Error('FATAL ERROR !!! : jwtPrivateKey is not defined.');
     // process.exit(1);
 }
 
-app.use(function(req, res, next) {
-    res.header("Access-Control-Allow-Origin", "http://localhost:3000"); // update to match the domain you will make the request from
-    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, x-auth-token, Content-Type, Accept");
-    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
-    next();
-});
+app.use(cors);
 
 if(process.env.NODE_ENV !== 'test'){
     let dt = new Date();
-    console.log(`Current timestamp: ${dt.getTime()}`);
-    console.log(`Current date: ${dt.toLocaleDateString()}`);
-    console.log(`Current time: ${dt.toTimeString()}`);
+    // console.log(`Current timestamp: ${dt.getTime()}`);
+    console.log(`Current date & time: ${dt.toLocaleDateString()} ${dt.toTimeString()}`);
 
     // bcrypt.hash('Moratuwa@123', 10).then(function(hash) {
     //     // Store hash in your password DB.
     //     console.log(hash);
     // });
 
-    console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
-    console.log(`app env: ${app.get('env')}`);
+    console.log(`NODE_ENV: ${process.env.NODE_ENV} | app env: ${app.get('env')}`);
     // console.log(`root directory: ${__dirname}`);
     DB.handleConnection();
 }
+
+require('./core/routes')(app);
 
 const options = {
     key: fs.readFileSync('bin/key.pem'),

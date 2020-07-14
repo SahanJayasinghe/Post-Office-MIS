@@ -1,4 +1,7 @@
 {
     "jwtPrivateKey": "1234",
-    "db": "po_mis_test"
+    "db": "po_mis_test",
+    "db_host": "localhost",
+    "db_user": "root",
+    "db_password": ""
 }

@@ -50,7 +50,7 @@ async function deliver_normal_post(delivery_address_id, post_office){
     else if (address_result.query_output[0].postal_code !== post_office) {
         return {output: null, error: `Only the Receiver's Post Office ${address_result.query_output[0].postal_code} can deliver the letter`}
     }
-    
+
     let update_str = 'on_route_count = on_route_count - 1, delivered_count = delivered_count + 1';
     let update_result = await Model.update('normal_posts', update_str, 'address_id = ?', delivery_address_id);
     if(update_result.query_error){
@@ -75,7 +75,7 @@ async function cancel_delivery(address_id, post_office){
     else if(np_result.query_output[0].on_route_count === 0){
         return {output: null, error: `There are no normal posts to this address`};
     }
-    
+
     let update_str = 'on_route_count = on_route_count - 1, failed_delivery_count = failed_delivery_count + 1';
     let update_result = await Model.update('normal_posts', update_str, 'address_id = ?', address_id);
     console.log(update_result);

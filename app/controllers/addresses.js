@@ -27,7 +27,7 @@ router.get('/:id', async (req, res) => {
     }   
 });
 
-router.post('/confirm', auth_post_office, async (req, res) => {
+router.post('/confirm', auth_post_office, async (req, res, next) => {
     try {
         // body contains house number & postal area ex: {number:46, postal_code: 10400}
         console.log(req.body);
@@ -49,13 +49,14 @@ router.post('/confirm', auth_post_office, async (req, res) => {
         }       
     } 
     catch (err) {
-        console.log('Route handler catch block');
-        console.log(err);
-        res.status(500).send('Server could not perform the action'); 
+        console.log('/addresses/confirm POST/ catch block');
+        next(err);
+        // console.log(err);
+        // res.status(500).send('Server could not perform the action'); 
     }
 });
 
-router.post('/', auth_admin, async (req, res) => {
+router.post('/', auth_admin, async (req, res, next) => {
     try{
         // body contains {number: '121/B', street: 'Temple Rd.', sub_area: 'Rawathawatta', postal_code: '10400'}
         console.log(req.body);
@@ -77,13 +78,12 @@ router.post('/', auth_admin, async (req, res) => {
         }
     }
     catch(err){
-        console.log('Route handler catch block');
-        console.log(err);
-        res.status(500).send('Server could not perform the action');      
+        console.log('/addresses POST/ catch block');
+        next(err);   
     }    
 });
 
-router.put('/:id', auth_admin, async (req, res) => {
+router.put('/:id', auth_admin, async (req, res, next) => {
     try{
         // body contains number, street, sub_area, postal_area
         console.log(req.body);
@@ -108,13 +108,12 @@ router.put('/:id', auth_admin, async (req, res) => {
         }
     }
     catch(err){
-        console.log('Route handler catch block');
-        console.log(err);
-        res.status(500).send('Server could not perform the action');   
+        console.log('/addresses/:id PUT/ catch block');
+        next(err);          
     }  
 });
 
-router.post('/area', auth_admin, async (req, res) => {
+router.post('/area', auth_admin, async (req, res, next) => {
     try {
         // body contains {postal_code: 10400}
         console.log(req.body);
@@ -140,9 +139,8 @@ router.post('/area', auth_admin, async (req, res) => {
         }
     } 
     catch (err) {
-        console.log('Route handler catch block');
-        console.log(err);
-        res.status(500).send('Server could not perform the action');
+        console.log('/addresses/area POST/ catch block');
+        next(err);
     }
 });
 

@@ -6,13 +6,13 @@ const Postal_Area = require('../models/Postal_Area');
 const auth_post_office = require('../../middleware/auth_post_office');
 const auth_admin = require('../../middleware/auth_admin');
 
-router.post('/login', async (req, res)=> {
+router.post('/login', async (req, res, next) => {
     try {
         // body contains postal code and password
         console.log(req.body);
         let body_length = Object.keys(req.body).length;
         let key_check = (req.body.hasOwnProperty('code') && req.body.hasOwnProperty('password'));
-        
+
         let code_check = false;
         if(req.body.hasOwnProperty('code')){
             let pattern = /^\d{5}$/;
@@ -31,7 +31,7 @@ router.post('/login', async (req, res)=> {
                 res.status(400).send(result.error);
             }
             else{
-                // with expiration 
+                // with expiration
                 // jwt.sign({
                 //     data: 'foobar'
                 //   }, 'secret', { expiresIn: '7 days' });
@@ -50,22 +50,21 @@ router.post('/login', async (req, res)=> {
         else{
             res.status(400).send('Invalid details provided');
         }
-    } 
+    }
     catch (err) {
-        console.log('Route handler catch block');
-        console.log(err);
-        res.status(500).send('Server could not perform the action');
+        console.log('/post-offices/login POST/ catch block');
+        next(err);
     }
 });
 
-router.put('/', auth_admin, async (req, res) => {
+router.put('/', auth_admin, async (req, res, next) => {
     try {
         // body contains postal code and password
         console.log(req.body);
         let body_length = Object.keys(req.body).length;
         let key_check = (req.body.hasOwnProperty('code') && req.body.hasOwnProperty('password'));
         let code_check = (req.body.hasOwnProperty('code') && /^\d{5}$/.test(req.body.code));
-        
+
         // for any special char: ^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[^a-zA-Z0-9])(?!.*\s).{6,20}$
         let pattern = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*#?&^_+\-=])[A-Za-z\d@$!%*#?&^_+\-=]{6,20}$/;
         let pw_check = req.body.hasOwnProperty('password') && pattern.test(req.body.password);
@@ -86,22 +85,21 @@ router.put('/', auth_admin, async (req, res) => {
             msg += (req.body.hasOwnProperty('password') && !pw_check) ? 'Password does not have the required strength. ' : '';
             res.status(400).send(msg);
         }
-    } 
+    }
     catch (err) {
-        console.log('Route handler catch block');
-        console.log(err);
-        res.status(500).send('Server could not perform the action');
+        console.log('/post-offices PUT/ catch block');
+        next(err);
     }
 });
 
-router.post('/reg-posts/:category', auth_post_office, async (req, res) => {
+router.post('/reg-posts/:category', auth_post_office, async (req, res, next) => {
     try {
         // req.body contains post office code and status type
         console.log(req.body);
         console.log(req.post_office);
         let code_check = (req.body.hasOwnProperty('post_office') && /^\d{5}$/.test(req.body.post_office));
         let param_check = (['received', 'sent'].includes(req.params.category));
-        let status_arr = ['on-route-receiver', 'receiver-unavailable', 'delivered', 
+        let status_arr = ['on-route-receiver', 'receiver-unavailable', 'delivered',
             'on-route-sender', 'sender-unavailable', 'sent-back', 'failed'];
         let status_check = req.body.hasOwnProperty('status') && status_arr.includes(req.body.status);
 
@@ -116,28 +114,27 @@ router.post('/reg-posts/:category', auth_post_office, async (req, res) => {
             else{
                 res.status(200).send(result.output);
             }
-        }                           
+        }
         else{
             res.status(400).send('Invalid request parameters');
         }
-    } 
+    }
     catch (err) {
-        console.log('Route handler catch block');
-        console.log(err);
-        res.status(500).send('Server could not perform the action');
+        console.log('/post-offices/reg-posts/:category POST/ catch block');
+        next(err);
     }
 });
 
-router.post('/parcels/:category', auth_post_office, async (req, res) => {
+router.post('/parcels/:category', auth_post_office, async (req, res, next) => {
     try {
-        // req.body contains post office code and status type 
+        // req.body contains post office code and status type
         console.log(req.body);
         console.log(req.params);
         let code_check = (req.body.hasOwnProperty('post_office') && /^\d{5}$/.test(req.body.post_office));
         let param_check = (['received', 'sent'].includes(req.params.category));
-        let status_arr = ['on-route-receiver', 'receiver-unavailable', 'delivered', 'failed'];         
+        let status_arr = ['on-route-receiver', 'receiver-unavailable', 'delivered', 'failed'];
         let status_check = req.body.hasOwnProperty('status') && status_arr.includes(req.body.status);
-        
+
         if (code_check && param_check && status_check){
             let result = await Post_Office.get_parcels_by_status(req.body.post_office, req.params.category, req.body.status);
             if(result.error){
@@ -149,21 +146,20 @@ router.post('/parcels/:category', auth_post_office, async (req, res) => {
             else{
                 res.status(200).send(result.output);
             }
-        }                           
+        }
         else{
             res.status(400).send('Invalid request parameters');
-        }      
-    } 
+        }
+    }
     catch (err) {
-        console.log('Route handler catch block');
-        console.log(err);
-        res.status(500).send('Server could not perform the action');
+        console.log('/post-offices/parcels/:category POST/ catch block');
+        next(err);
     }
 });
 
-router.post('/money-orders/:category', auth_post_office, async (req, res) => {
+router.post('/money-orders/:category', auth_post_office, async (req, res, next) => {
     try {
-        // req.body contains post office code and status type 
+        // req.body contains post office code and status type
         console.log(req.body);
         console.log(req.params);
         let code_check = (req.body.hasOwnProperty('post_office') && /^\d{5}$/.test(req.body.post_office));
@@ -184,11 +180,10 @@ router.post('/money-orders/:category', auth_post_office, async (req, res) => {
         else{
             res.status(400).send('Invalid request parameters');
         }
-    } 
+    }
     catch (err) {
-        console.log('Route handler catch block');
-        console.log(err);
-        res.status(500).send('Server could not perform the action');
+        console.log('/post-offices/money-orders/:category catch block');
+        next(err);
     }
 });
 
@@ -212,7 +207,7 @@ router.post('/reg-posts/all-received', async (req, res) => {
         else{
             res.status(400).send('Invalid details provided');
         }
-    } 
+    }
     catch (err) {
         console.log('Route handler catch block');
         console.log(err);

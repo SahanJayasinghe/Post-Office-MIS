@@ -6,7 +6,7 @@ const Parcel_Post = require('../models/Parcel_Post');
 const Normal_Post = require('../models/Normal_Post');
 const helper = require('../../core/helper');
 
-router.post('/address', async (req, res) => {
+router.post('/address', async (req, res, next) => {
     try {
         // body contains number, postal_code, resident_key
         console.log(req.body);
@@ -36,13 +36,14 @@ router.post('/address', async (req, res) => {
         }
     } 
     catch (err) {
-        console.log('Route handler catch block');
-        console.log(err);
-        res.status(500).send('Server could not perform the action');
+        console.log('/resident-details/address POST/ catch block');
+        next(err);
+        // console.log(err);
+        // res.status(500).send('Server could not perform the action');
     }
 });
 
-router.post('/reg-posts/:category', async (req, res) => {
+router.post('/reg-posts/:category', async (req, res, next) => {
     try {
         // req.body contains resident id (address id), status type and resident_key
         // ex: {resident_id: '2', status: 'delivering', resident_key: '***'}
@@ -79,13 +80,12 @@ router.post('/reg-posts/:category', async (req, res) => {
         }
     } 
     catch (err) {
-        console.log('Route handler catch block');
-        console.log(err);
-        res.status(500).send('Server could not perform the action');
+        console.log('/resident-details/reg-posts/:category POST/ catch block');
+        next(err);
     }
 });
 
-router.post('/parcels', async (req, res) => {
+router.post('/parcels', async (req, res, next) => {
     try {
         // body contains resident_id, status and resident_key
         console.log(req.body);
@@ -119,13 +119,13 @@ router.post('/parcels', async (req, res) => {
         }
     } 
     catch (err) {
-        console.log('Route handler catch block');
-        console.log(err);
+        console.log('/resident-details/parcels POST/ catch block');
+        next(err);
         res.status(500).send('Server could not perform the action');
     }
 });
 
-router.post('/normal-posts',async (req, res) => {
+router.post('/normal-posts',async (req, res, next) => {
     try {
         // body contains resident_id and resident_key
         console.log(req.body);
@@ -158,9 +158,8 @@ router.post('/normal-posts',async (req, res) => {
         }
     } 
     catch (err) {
-        console.log('Route handler catch block');
-        console.log(err);
-        res.status(500).send('Server could not perform the action');
+        console.log('/resident-details/normal-posts POST/ catch block');
+        next(err);
     }
 });
 

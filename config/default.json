@@ -1,4 +1,7 @@
 {
     "jwtPrivateKey": "",
-    "db": "post_office_mis"
+    "db": "post_office_mis",
+    "db_host": "localhost",
+    "db_user": "root",
+    "db_password": ""
 }

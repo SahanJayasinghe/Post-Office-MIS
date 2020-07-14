@@ -23,7 +23,7 @@ async function get_postal_area(input){
         // }
         // return result2;
     }
-    
+
     debug(result);
     if(result.query_error){
         return {output: null, error: result.query_error.message};
@@ -45,7 +45,7 @@ async function get_all_postal_areas(){
 }
 
 async function insert_postal_area(input_obj){
-    input_obj.name = input_obj.name.trim().toLowerCase(); 
+    input_obj.name = input_obj.name.trim().toLowerCase();
 
     let result = await Model.select('postal_areas', '*', 'code = ?', input_obj.code);
     debug(result);

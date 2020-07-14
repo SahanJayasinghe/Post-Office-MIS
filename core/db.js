@@ -1,12 +1,13 @@
 const mysql = require('mysql');
 const config = require('config');
+const logger = require('./logger');
 const debug = require('debug')('po_mis:db');
 
 const db_name = config.get('db');
 const db_config = {
-    host: 'localhost',
-    user: 'root',
-    password: '',
+    host: config.get('db_host'),
+    user: config.get('db_user'),
+    password: config.get('db_password'),
     database: db_name,
     timezone: '+05:30'
 };
@@ -31,7 +32,8 @@ function handleConnection() {
     });                                     
                                             
     connection.on('error', (err) => {
-        console.log('db error', err);
+        console.log('db connection down', err);
+        logger.error('db connection down', err);
         if(err.code === 'PROTOCOL_CONNECTION_LOST' || err.code === 'ECONNRESET') {
             handleConnection();            
             // Connection to the MySQL server is usually lost due to either server restart, or a

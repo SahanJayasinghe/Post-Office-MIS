@@ -58,7 +58,7 @@ async function insert_address(address){
     if (address_result.query_output.length){
         let pa = `${pa_result.query_output[0].name}, ${address.postal_code}`;
         return{
-            output: null, 
+            output: null,
             error: `house number ${address.number} already exists in the postal area ${pa}.`
         };
     }
@@ -73,9 +73,9 @@ async function insert_address(address){
         rand_str += characters.charAt(x);
     }
     console.log(rand_str);
-    
+
     let address_str = `${address.number}`;
-    address.resident_key = rand_str; 
+    address.resident_key = rand_str;
     // delete address.postal_area;
     // address.postal_code = code;
     (address.street.trim() === '') ? delete address.street : address_str+=`, ${address.street}`;
@@ -89,10 +89,10 @@ async function insert_address(address){
     }
     else{
         return {output: {address: address_str, resident_key: rand_str}, error: null};
-    }    
+    }
 }
 
-async function get_addresses_by_area(postal_code){    
+async function get_addresses_by_area(postal_code){
     // let code = postal_area.split(',')[1];
     let pa_result = await Model.select('postal_areas', 'name', 'code = ?', postal_code);
 
@@ -128,7 +128,7 @@ async function change_address(address_obj){
     else if(address_result.query_error){
         return {output: null,  error: address_result.query_error.message};
     }
-    
+
     // let code = address_obj.postal_area.split(',')[1];       // postal_area: Moratuwa,10400
     let pa_result = await Model.select('postal_areas', 'name', 'code = ?', address_obj.postal_code);
     console.log(pa_result);
@@ -146,7 +146,7 @@ async function change_address(address_obj){
         if(result1.query_output.length){
             let pa = `${pa_result.query_output[0].name}, ${address_obj.postal_code}`;
             return {
-                output: null, 
+                output: null,
                 error: `There is an address with the house number ${address_obj.number} in the postal area ${pa}.`
             };
         }
@@ -158,7 +158,7 @@ async function change_address(address_obj){
     if(address_obj.street.trim() === '') {address_obj.street = null}
     if(address_obj.sub_area.trim() === '') {address_obj.sub_area = null}
     console.log(address_obj);
-    
+
     let update_fields = [];
     let params = [];
     if(address_obj.number != old_address.number){
@@ -178,11 +178,11 @@ async function change_address(address_obj){
     }
     if(address_obj.postal_code != old_address.postal_code){
         // update_str += ', postal_code = ?';
-        update_fields.push('postal_code = ?');        
+        update_fields.push('postal_code = ?');
         // let new_id = `${code}-${prev_id.slice(6)}`;
         params.push(address_obj.postal_code);
     }
-    
+
     console.log(params);
     if(!update_fields.length){
         return {output: null, error: 'Updated attributes are same as the existing ones'};
@@ -211,7 +211,7 @@ async function get_resident_key(address_id){
     }
 }
 
-module.exports = { 
+module.exports = {
     get_addresses_by_area,
     get_address_by_id,
     get_address_by_details,

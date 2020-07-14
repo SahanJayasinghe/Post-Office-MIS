@@ -11,7 +11,7 @@ router.post('/address', auth_post_office, async (req, res) => {
         console.log(req.body);
         let body_length = Object.keys(req.body).length;
         let body_check = helper.validate_number_postal_code(req.body);
-        if((body_length == 2) && body_check){      
+        if((body_length == 2) && body_check){
             let result = await Address.get_address_by_details(req.body);
             if(result.error){
                 res.status(400).send(result.error);
@@ -19,14 +19,14 @@ router.post('/address', auth_post_office, async (req, res) => {
             else{
                 let address_arr = [result.output.id];
                 address_arr = address_arr.concat(helper.get_address_array(result.output));
-                
+
                 res.status(200).send(address_arr);
             }
         }
         else{
             res.status(400).send('Invalid details provided');
         }
-    } 
+    }
     catch (err) {
         console.log('Route handler catch block');
         console.log(err);
@@ -34,18 +34,18 @@ router.post('/address', auth_post_office, async (req, res) => {
     }
 });
 
-router.post('/', auth_post_office, async (req, res) => {
+router.post('/', auth_post_office, async (req, res, next) => {
     try {
-        // req.body contains 
+        // req.body contains
         // receiver: {id: 4, name: xyz}
-        // payment: 52.50, descript: 'e-bay order', post_office: 10400 
+        // payment: 52.50, descript: 'e-bay order', post_office: 10400
         console.log(req.body);
 
         let body_length = Object.keys(req.body).length;
         let receiver_check = ( req.body.hasOwnProperty('receiver') && helper.validate_id_name(req.body.receiver) );
         let payment_check = (req.body.hasOwnProperty('payment') && helper.validate_currency(req.body.payment));
         let str_pattern = /^(?=.*[A-Za-z])[A-Za-z\d\-/()[\]{}:<>?|!@&#*^$_=+\\.,\s]{1,1024}$/;
-        let descript_check = ( req.body.hasOwnProperty('descript') 
+        let descript_check = ( req.body.hasOwnProperty('descript')
             && ( req.body.descript.trim() === '' || str_pattern.test(req.body.descript)) );
         let code_check = req.body.hasOwnProperty('post_office') && /^\d{5}$/.test(req.body.post_office);
 
@@ -63,15 +63,14 @@ router.post('/', auth_post_office, async (req, res) => {
         else{
             res.status(400).send('Invalid details provided');
         }
-    } 
+    }
     catch (err) {
-        console.log('Route handler catch block');
-        console.log(err);
-        res.status(500).send('Server could not perform the action');
+        console.log('/parcel-post POST/ catch block');
+        next(err);
     }
 });
 
-router.get('/:id', auth_post_office, async (req, res) => {
+router.get('/:id', auth_post_office, async (req, res, next) => {
     try {
         console.log(req.params.id);
         let id_check = /^\d+$/.test(req.params.id);
@@ -94,15 +93,14 @@ router.get('/:id', auth_post_office, async (req, res) => {
             attempts_receiver: result.output.delivery_attempts
         };
         res.status(200).send(response_obj);
-    } 
+    }
     catch (err) {
-        console.log('Route handler catch block');
-        console.log(err);
-        res.status(500).send('Server could not perform the action');
+        console.log('/parcel-post/:id GET/ catch block');
+        next(err);
     }
 });
 
-router.get('/route-info/:id', auth_post_office, async (req, res) => {
+router.get('/route-info/:id', auth_post_office, async (req, res, next) => {
     try {
         console.log(req.params.id);
         let id_check = /^\d+$/.test(req.params.id);
@@ -120,16 +118,15 @@ router.get('/route-info/:id', auth_post_office, async (req, res) => {
         }
     }
     catch (err) {
-        console.log('Route handler catch block');
-        console.log(err);
-        res.status(500).send('Server could not perform the action');
+        console.log('/parcel-post/route-info/:id GET/ catch block');
+        next(err);
     }
 });
 
-router.put('/location-update', auth_post_office, async (req, res) => {
+router.put('/location-update', auth_post_office, async (req, res, next) => {
     try {
         // body contains {id: '12', post_office: '10400'}
-        // post office code can be extracted from the token. 
+        // post office code can be extracted from the token.
         console.log(req.body);
         let body_length = Object.keys(req.body).length;
         let id_check = req.body.hasOwnProperty('id') && /^\d+$/.test(req.body.id);
@@ -148,15 +145,14 @@ router.put('/location-update', auth_post_office, async (req, res) => {
         else{
             res.status(400).send('Invalid details provided');
         }
-    } 
+    }
     catch (err) {
-        console.log('Route handler catch block');
-        console.log(err);
-        res.status(500).send('Server could not perform the action');
+        console.log('/parcel-post/location-update PUT/ catch block');
+        next(err);
     }
 });
 
-router.put('/discard', auth_post_office, async (req, res) => {
+router.put('/discard', auth_post_office, async (req, res, next) => {
     try {
         //body contains address_id and post_office
         console.log(req.body);
@@ -178,11 +174,10 @@ router.put('/discard', auth_post_office, async (req, res) => {
         else{
             res.status(400).send('Invalid details provided');
         }
-    } 
+    }
     catch (err) {
-        console.log('Route handler catch block');
-        console.log(err);
-        res.status(500).send('Server could not perform the action');
+        console.log('/parcel-post/discard PUT/ catch block');
+        next(err);
     }
 });
 

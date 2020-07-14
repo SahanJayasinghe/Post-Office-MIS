@@ -30,7 +30,7 @@ async function create_money_order(input) {
         rand_str += characters.charAt(x);
     }
     console.log(rand_str);
-    
+
     let salt = await bcrpyt.genSalt(10);
     let hash_key = await bcrpyt.hash(rand_str, salt);
     input.secret_key = hash_key;
@@ -70,7 +70,7 @@ async function verify_money_order(input, customer){
 
     let sender_check = sender_name.trim().toLowerCase() === select_result.query_output[0].sender_name.toLowerCase();
     let receiver_check = receiver_name.trim().toLowerCase() === select_result.query_output[0].receiver_name.toLowerCase();
-    
+
     let error_msgs = [];
     if (!sender_check){
         error_msgs.push(`Sender's name ${sender_name} does not match.`);
@@ -91,20 +91,20 @@ async function verify_money_order(input, customer){
         return {output: null, error: 'Invalid Key Code.'};
     }
     let {posted_datetime, expire_after} = select_result.query_output[0];
-    let [is_expired, expire_at] = helper.expiration_check(posted_datetime, expire_after);    
-        
-    let delivered_at = (select_result.query_output[0].status !== 'created') 
+    let [is_expired, expire_at] = helper.expiration_check(posted_datetime, expire_after);
+
+    let delivered_at = (select_result.query_output[0].status !== 'created')
     ? helper.dt_local(select_result.query_output[0].delivered_datetime)
     : null;
-    
+
     let output_obj = {
         id: select_result.query_output[0].id,
-        sender_name: select_result.query_output[0].sender_name, 
+        sender_name: select_result.query_output[0].sender_name,
         receiver_name: select_result.query_output[0].receiver_name,
         status: select_result.query_output[0].status,
         posted_at: helper.dt_local(select_result.query_output[0].posted_datetime),
         expire_at,
-        is_expired, 
+        is_expired,
         amount: parseFloat(select_result.query_output[0].amount).toFixed(2),
         delivered_at
     };
@@ -112,7 +112,7 @@ async function verify_money_order(input, customer){
         let return_expire = helper.expiration_check(posted_datetime, 24);
         output_obj.return_expire_at = return_expire[1];
         output_obj.is_return_expired = return_expire[0];
-    }    
+    }
     return {output: output_obj, error: null};
 }
 
@@ -142,9 +142,9 @@ async function deliver_money_order(id, secret_key, post_office){
         return {output: null, error: `Money Order has been ${status} at ${delivered_at}`};
     }
 
-    let {posted_datetime, expire_after} = select_result.query_output[0];    
+    let {posted_datetime, expire_after} = select_result.query_output[0];
     let [is_expired, expire_at] = helper.expiration_check(posted_datetime, expire_after);
-    
+
     if(is_expired){
         return {output: null, error: `Money Order has been expired at ${expire_at}.`};
     }
@@ -184,9 +184,9 @@ async function return_money_order(id, secret_key, post_office){
         return {output: null, error: `Money Order has been ${status} at ${delivered_at}`};
     }
 
-    let {posted_datetime} = select_result.query_output[0];    
+    let {posted_datetime} = select_result.query_output[0];
     let [is_expired, expire_at] = helper.expiration_check(posted_datetime, 24);
-    
+
     if(is_expired){
         return {output: null, error: `Money Order return duration expired at ${expire_at}.`};
     }

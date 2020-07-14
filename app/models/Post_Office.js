@@ -37,7 +37,7 @@ async function get_reg_posts_by_status(post_office, sent_or_received, status){
     let status_arr = ['on-route-receiver', 'receiver-unavailable', 'on-route-sender', 'sender-unavailable'];
     let params = [post_office, status];
     let proc_result;
-    
+
     if(status_arr.includes(status)){
         proc_result = await Model.call_procedure(`active_reg_posts_${sent_or_received}`, params);
     }
@@ -61,7 +61,7 @@ async function get_reg_posts_by_status(post_office, sent_or_received, status){
             let rp_arr = [];
             rp_arr.push(reg_post.id);
             rp_arr.push(`${reg_post.speed_post}`);
-            
+
             // rp_obj.receiver_name = reg_post.receiver_name;
             let receiver_obj = await Address.get_address_by_id(reg_post.receiver_id);
             // console.log(receiver_obj);
@@ -85,7 +85,7 @@ async function get_reg_posts_by_status(post_office, sent_or_received, status){
                 let sen_address = helper.get_address_str(sender_obj.output);
                 rp_arr.push([reg_post.sender_name, sen_address]);
             }
-            
+
             if(status_arr.includes(status)){
                 rp_arr.push(`${reg_post.current_area}, ${reg_post.current_code}`);
                 rp_arr.push(helper.dt_local(reg_post.last_update));
@@ -94,13 +94,13 @@ async function get_reg_posts_by_status(post_office, sent_or_received, status){
             if(['delivered', 'sent-back'].includes(status)){
                 rp_arr.push(helper.dt_local(reg_post.delivered_datetime));
             }
-            
+
             if(status !== 'on-route-receiver'){
                 rp_arr.push(reg_post.delivery_attempts_receiver);
             }
             if(['sender-unavailable', 'sent-back', 'failed'].includes(status)){
                 rp_arr.push(reg_post.delivery_attempts_sender);
-            }            
+            }
             console.log(rp_arr);
             result_arr.push(rp_arr);
         }
@@ -191,7 +191,7 @@ async function get_parcels_by_status(post_office, sent_or_received, status){
             if(status === 'on-route-receiver'){
                 parcel_arr.push(`${parcel.current_area}, ${parcel.current_code}`);
             }
-            
+
             if(status !== 'delivered'){
                 parcel_arr.push(helper.dt_local(parcel.last_update));
             }
@@ -213,7 +213,7 @@ async function get_parcels_by_status(post_office, sent_or_received, status){
 }
 
 async function get_money_orders_by_status(post_office, sent_or_received, status){
-    let status_arr = ['delivered', 'returned']; 
+    let status_arr = ['delivered', 'returned'];
     let proc_result;
 
     if(status_arr.includes(status)){
@@ -236,7 +236,7 @@ async function get_money_orders_by_status(post_office, sent_or_received, status)
     for (const mo_obj of money_orders) {
         let mo_arr = [mo_obj.id, mo_obj.sender_name, mo_obj.receiver_name];
         mo_arr.push(parseFloat(mo_obj.amount).toFixed(2));
-        
+
         if(status_arr.includes(status)) {
             mo_arr.push(helper.dt_local(mo_obj.delivered_datetime));
         }
@@ -245,10 +245,10 @@ async function get_money_orders_by_status(post_office, sent_or_received, status)
             mo_arr.push(expire[1]);
         }
 
-        (sent_or_received === 'received') 
+        (sent_or_received === 'received')
         ? mo_arr.push(`${mo_obj.posted_area}, ${mo_obj.posted_code}`)
         : mo_arr.push(`${mo_obj.receiver_area}, ${mo_obj.receiver_code}`);
-        
+
         mo_arr.push(helper.dt_local(mo_obj.posted_datetime));
 
         result_arr.push(mo_arr);

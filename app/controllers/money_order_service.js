@@ -4,7 +4,7 @@ const Money_Order = require('../models/Money_Order');
 const helper = require('../../core/helper');
 const auth_post_office = require('../../middleware/auth_post_office');
 
-router.post('/', auth_post_office, async (req, res) => {
+router.post('/', auth_post_office, async (req, res, next) => {
     try {
         // body contains {sender_name, receiver_name, receiver_postal_code, amount, price, posted_location}
         console.log(req.body);
@@ -22,15 +22,16 @@ router.post('/', auth_post_office, async (req, res) => {
         else{
             res.status(400).send('Invalid details provided');
         }
-    } 
+    }
     catch (err) {
-        console.log('Route handler catch block');
-        console.log(err);
-        res.status(500).send('Server could not perform the action');
+        console.log('/money-order POST/ catch block');
+        next(err)
+        // console.log(err);
+        // res.status(500).send('Server could not perform the action');
     }
 });
 
-router.post('/verify/:customer', auth_post_office, async (req, res) => {
+router.post('/verify/:customer', auth_post_office, async (req, res, next) => {
     try {
         // body = {sender_name, receiver_name, id, secret_key, post_office}
         console.log(req.body);
@@ -54,7 +55,7 @@ router.post('/verify/:customer', auth_post_office, async (req, res) => {
         let name_pattern = /^(?=.*[A-Za-z])[A-Za-z\-,.\s]{1,50}$/;
         let sender_check = req.body.hasOwnProperty('sender_name') && name_pattern.test(req.body.sender_name);
         let receiver_check = req.body.hasOwnProperty('receiver_name') && name_pattern.test(req.body.receiver_name);
-        
+
         let secret_key_check = req.body.hasOwnProperty('secret_key') && req.body.secret_key.trim() !== '';
         secret_key_check = secret_key_check && req.body.secret_key.length < 21;
         let po_check = req.body.hasOwnProperty('post_office') && /^\d{5}$/.test(req.body.post_office);
@@ -72,15 +73,14 @@ router.post('/verify/:customer', auth_post_office, async (req, res) => {
         else{
             res.status(400).send('Invalid details provided');
         }
-    } 
+    }
     catch (err) {
-        console.log('Route handler catch block');
-        console.log(err);
-        res.status(500).send('Server could not perform the action');
+        console.log('/money-order/verify/:customer POST/ catch block');
+        next(err);
     }
 });
 
-router.put('/:process', auth_post_office, async (req, res) => {
+router.put('/:process', auth_post_office, async (req, res, next) => {
     try {
         // body = {id, secret_key, post_office}
         console.log(req.body);
@@ -102,7 +102,7 @@ router.put('/:process', auth_post_office, async (req, res) => {
             (req.params.process === 'deliver')
             ? result = await Money_Order.deliver_money_order(id, secret_key, post_office)
             : result = await Money_Order.return_money_order(id, secret_key, post_office);
-            
+
             console.log(result);
             if(result.error){
                 res.status(400).send(result.error);
@@ -113,12 +113,11 @@ router.put('/:process', auth_post_office, async (req, res) => {
         }
         else{
             res.status(400).send('Invalid details provided');
-        }            
-    } 
+        }
+    }
     catch (err) {
-        console.log('Route handler catch block');
-        console.log(err);
-        res.status(500).send('Server could not perform the action');    
+        console.log('/money-order/:process PUT/ catch block');
+        next(err);
     }
 });
 

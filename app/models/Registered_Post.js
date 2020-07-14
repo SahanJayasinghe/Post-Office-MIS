@@ -8,13 +8,13 @@ async function create_reg_post(sender, receiver, price, speed_post, post_office)
     if(sender.id == receiver.id){
         return {output: null, error: 'Sender and Receiver can not be the same'};
     }
-    
+
     // let dt = new Date();
     // let date = dt.toLocaleDateString().split('/');
     // let time = dt.toTimeString().split(' ');
     // let dt_str = `${date[2]}-${date[0]}-${date[1]} ${time[0]}`;
-    let dt_str = helper.current_dt_str(); 
-    
+    let dt_str = helper.current_dt_str();
+
     let insert_obj = {
         sender_id: sender.id,
         sender_name: sender.name,
@@ -105,7 +105,7 @@ async function deliver(reg_post_id, post_office){
         let update_str = 'status = ?, current_location = ?, last_update = ?, delivery_attempts_receiver = delivery_attempts_receiver + 1, delivered_datetime = ?';
         let params = ['delivered', post_office, dt_str, dt_str, reg_post_id];
         update_result = await Model.update('registered_posts', update_str, 'id = ?', params);
-    }    
+    }
     else if(['on-route-sender', 'sender-unavailable'].includes(status)) {
         let sender_result = await Model.select('addresses', 'postal_code', 'id = ?', reg_post_result.query_output[0].sender_id);
         if (sender_result.query_output[0].postal_code !== post_office){
@@ -115,7 +115,7 @@ async function deliver(reg_post_id, post_office){
         let params = ['sent-back', post_office, dt_str, dt_str, reg_post_id];
         update_result = await Model.update('registered_posts', update_str, 'id = ?', params);
     }
-    
+
     if(update_result.query_error){
         return {output: null, error: update_result.query_error.message};
     }
@@ -134,8 +134,8 @@ async function send_back(reg_post_id, post_office){
     }
 
     let {current_location, status} = regpost_result.query_output[0];
-    let attempts_rec = regpost_result.query_output[0].delivery_attempts_receiver;    
-    
+    let attempts_rec = regpost_result.query_output[0].delivery_attempts_receiver;
+
     if(status === 'receiver-unavailable' && attempts_rec > 0 && current_location === post_office){
         let dt_str = helper.current_dt_str();
 
@@ -170,7 +170,7 @@ async function send_back(reg_post_id, post_office){
             msg += `Only the Post Office ${current_location} has the authority to return this post.`;
         }
         return {output: null, error: msg}
-    }    
+    }
 }
 
 async function increment_attempts(reg_post_id, post_office){
@@ -231,7 +231,7 @@ async function discard_reg_post(reg_post_id, post_office){
     let attempts_sen = regpost_result.query_output[0].delivery_attempts_sender;
 
     if(status === 'sender-unavailable' && attempts_sen > 0 && current_location === post_office){
-        let dt_str = helper.current_dt_str();    
+        let dt_str = helper.current_dt_str();
         let update_str = 'status = ?, last_update = ?';
         let params = ['failed', dt_str, reg_post_id];
         let update_result = await Model.update('registered_posts', update_str, 'id = ?', params);
@@ -256,7 +256,7 @@ async function discard_reg_post(reg_post_id, post_office){
 async function get_reg_post(reg_post_id){
     let reg_post = await Model.select('registered_posts', '*', 'id = ?', reg_post_id);
     console.log(reg_post);
-    
+
     if(!reg_post.query_output.length){
         return {output: null, error: 'Registered post id does not exist'};
     }
@@ -291,9 +291,9 @@ async function get_reg_post(reg_post_id){
         cur_loc = `${PA_result.output.name},${PA_result.output.code}`;
     }
     // let posted_dt = reg_post.query_output[0].posted_datetime.toString();
-    // let update_dt = reg_post.query_output[0].last_update.toString();    
+    // let update_dt = reg_post.query_output[0].last_update.toString();
     let delivered_datetime = (reg_post.query_output[0].delivered_datetime) ? helper.dt_local(reg_post.query_output[0].delivered_datetime) : null;
-    
+
     let reg_post_obj = {
         id: reg_post_id,
         receiver: rec_arr,
@@ -340,7 +340,7 @@ async function get_route_info(id){
             route_info['return_route'].push([record.name, record.code, helper.dt_local(record.updated_at)]);
         }
         else{
-            route_info['delivery_route'].push([record.name, record.code, helper.dt_local(record.updated_at)]); 
+            route_info['delivery_route'].push([record.name, record.code, helper.dt_local(record.updated_at)]);
         }
     }
 
@@ -385,14 +385,14 @@ async function get_resident_reg_posts_by_status(resident_id, sent_or_received, s
     let status_arr = ['delivering', 'returning'];
     let params = [resident_id, status];
     let proc_result;
-    
+
     if(status_arr.includes(status)){
         proc_result = await Model.call_procedure(`resident_active_reg_posts_${sent_or_received}`, params);
     }
     else{
         proc_result = await Model.call_procedure(`resident_completed_reg_posts_${sent_or_received}`, params);
     }
-    
+
     if(proc_result.query_error){
         return {output: null, error: proc_result.query_error.message};
     }
@@ -409,7 +409,7 @@ async function get_resident_reg_posts_by_status(resident_id, sent_or_received, s
 
         if(sent_or_received == 'received'){
             let sender_address_str = helper.get_address_str(reg_post);
-            rp_arr.push([reg_post.sender_name, sender_address_str]); 
+            rp_arr.push([reg_post.sender_name, sender_address_str]);
             rp_arr.push(reg_post.receiver_name);
         }
         else{
@@ -424,7 +424,7 @@ async function get_resident_reg_posts_by_status(resident_id, sent_or_received, s
                 result.error = pa_result.query_error;
                 return;
             }
-            else{                
+            else{
                 rp_arr.push(`${pa_result.query_output[0].name}, ${reg_post.current_location}`);
                 rp_arr.push(helper.dt_local(reg_post.last_update));
             }

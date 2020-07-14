@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jul 04, 2020 at 06:20 PM
+-- Generation Time: Jul 13, 2020 at 07:05 PM
 -- Server version: 10.1.38-MariaDB
 -- PHP Version: 7.3.2
 
@@ -176,6 +176,19 @@ CREATE TABLE `detailed_addresses` (
 -- (See below for the actual view)
 --
 CREATE TABLE `detailed_parcels` (
+`id` int(11)
+,`receiver_id` int(11)
+,`receiver_name` varchar(50)
+,`payment` decimal(6,2)
+,`description` varchar(1024)
+,`status` enum('on-route-receiver','receiver-unavailable','delivered','failed')
+,`current_area` varchar(20)
+,`current_code` varchar(5)
+,`last_update` datetime
+,`posted_location` varchar(5)
+,`posted_datetime` datetime
+,`delivery_attempts` int(11)
+,`delivered_datetime` datetime
 );
 
 -- --------------------------------------------------------
@@ -399,7 +412,7 @@ INSERT INTO `registered_posts` (`id`, `sender_id`, `sender_name`, `receiver_id`,
 (18, 2, 'John W.', 5, 'Peiris', '93.50', 0, 'on-route-receiver', '01000', '2020-05-26 11:50:37', '2020-05-29 19:45:05', 0, 0, NULL),
 (19, 1, 'Kamal Perera', 7, 'Silva', '106.50', 0, 'on-route-receiver', '11000', '2020-05-31 16:40:30', '2020-06-02 07:53:22', 0, 0, NULL),
 (20, 3, 'Sarath', 11, 'Edison', '244.90', 1, 'on-route-receiver', '01000', '2020-06-04 23:39:51', '2020-06-05 22:17:48', 0, 0, NULL),
-(21, 9, 'A.B.C. Silva', 13, 'Ferguson', '258.80', 1, 'on-route-receiver', '80000', '2020-06-30 23:21:48', '2020-07-04 08:17:22', 0, 0, NULL);
+(21, 9, 'A.B.C. Silva', 13, 'Ferguson', '258.80', 1, 'on-route-receiver', '80300', '2020-06-30 23:21:48', '2020-07-11 22:54:03', 0, 0, NULL);
 
 --
 -- Triggers `registered_posts`
@@ -472,7 +485,8 @@ INSERT INTO `reg_posts_route_info` (`reg_post_id`, `location`, `updated_at`, `di
 (14, '10400', '2020-05-22 08:48:19', 1),
 (14, '11000', '2020-05-23 06:08:49', 1),
 (21, '10400', '2020-07-02 22:50:09', 0),
-(21, '80000', '2020-07-04 08:17:22', 0);
+(21, '80000', '2020-07-04 08:17:22', 0),
+(21, '80300', '2020-07-11 22:54:03', 0);
 
 -- --------------------------------------------------------
 
@@ -519,7 +533,7 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 --
 DROP TABLE IF EXISTS `detailed_parcels`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `detailed_parcels`  AS  select `parcels`.`id` AS `id`,`parcels`.`receiver_id` AS `receiver_id`,`parcels`.`receiver_name` AS `receiver_name`,`parcels`.`payment` AS `payment`,`parcels`.`description` AS `description`,`parcels`.`status` AS `status`,`postal_areas`.`name` AS `current_area`,`parcels`.`current_location` AS `current_code`,`parcels`.`last_update` AS `last_update`,`parcels`.`posted_location` AS `posted_location`,`parcels`.`posted_datetime` AS `posted_datetime`,`parcels`.`reached_receiver_po` AS `reached_receiver_po`,`parcels`.`delivery_attempts` AS `delivery_attempts`,`parcels`.`delivered_datetime` AS `delivered_datetime` from (`parcels` join `postal_areas` on((`parcels`.`current_location` = `postal_areas`.`code`))) ;
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `detailed_parcels`  AS  select `parcels`.`id` AS `id`,`parcels`.`receiver_id` AS `receiver_id`,`parcels`.`receiver_name` AS `receiver_name`,`parcels`.`payment` AS `payment`,`parcels`.`description` AS `description`,`parcels`.`status` AS `status`,`postal_areas`.`name` AS `current_area`,`parcels`.`current_location` AS `current_code`,`parcels`.`last_update` AS `last_update`,`parcels`.`posted_location` AS `posted_location`,`parcels`.`posted_datetime` AS `posted_datetime`,`parcels`.`delivery_attempts` AS `delivery_attempts`,`parcels`.`delivered_datetime` AS `delivered_datetime` from (`parcels` join `postal_areas` on((`parcels`.`current_location` = `postal_areas`.`code`))) ;
 
 -- --------------------------------------------------------
 

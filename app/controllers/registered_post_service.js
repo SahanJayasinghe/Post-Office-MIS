@@ -13,7 +13,7 @@ router.post('/address', auth_post_office, async (req, res, next) => {
         let body_length = Object.keys(req.body).length;
         let receiver_check = req.body.hasOwnProperty('receiver') && helper.validate_number_postal_code(req.body.receiver);
         let sender_check = req.body.hasOwnProperty('sender') && helper.validate_number_postal_code(req.body.sender);
-        
+
         if((body_length == 2) && receiver_check && sender_check){
 
             let num_eq = (req.body.receiver.number == req.body.sender.number);
@@ -51,29 +51,29 @@ router.post('/address', auth_post_office, async (req, res, next) => {
         else{
             res.status(400).send('Invalid details provided');
         }
-    } 
+    }
     catch (err) {
-        console.log('registered-post-service/address/POST catch block');
+        console.log('/registered-post/address POST/ catch block');
         next(err);
         // console.log(err);
         // res.status(500).send('Server could not perform the action');
     }
 });
 
-router.post('/', auth_post_office, async (req, res) => {
+router.post('/', auth_post_office, async (req, res, next) => {
     try {
-        // req.body contains 
+        // req.body contains
         // sender = {id: 2, name: abc}
         // receiver = {id: 4, name: xyz}
         // price: 52.50, speed_post: 0, post_office: '10400'
         console.log(req.body);
-        
+
         let body_length_check = (Object.keys(req.body).length == 5);
         let receiver_check = ( req.body.hasOwnProperty('receiver') && helper.validate_id_name(req.body.receiver) );
         let sender_check = ( req.body.hasOwnProperty('sender') && helper.validate_id_name(req.body.sender) );
         let speed_post_check = req.body.hasOwnProperty('speed_post') && [true, false].includes(req.body.speed_post);
-        console.log(speed_post_check);
-        let code_check = req.body.hasOwnProperty('post_office') && /^\d{5}$/.test(req.body.post_office);        
+
+        let code_check = req.body.hasOwnProperty('post_office') && /^\d{5}$/.test(req.body.post_office);
         let price_check = helper.validate_currency(req.body.price);
 
         if(body_length_check && receiver_check && sender_check && speed_post_check && code_check && price_check){
@@ -93,13 +93,12 @@ router.post('/', auth_post_office, async (req, res) => {
         }
     }
     catch (err) {
-        console.log('Route handler catch block');
-        console.log(err);
-        res.status(500).send('Server could not perform the action');
+        console.log('/registered-post POST/ catch block');
+        next(err);
     }
 });
 
-router.get('/:id', auth_post_office, async (req, res) => {
+router.get('/:id', auth_post_office, async (req, res, next) => {
     try {
         console.log(req.params.id);
         let id_check = /^\d+$/.test(req.params.id);
@@ -113,8 +112,6 @@ router.get('/:id', auth_post_office, async (req, res) => {
             return res.status(400).send(result.error);
         }
         let status = helper.format_status(result.output.status);
-        console.log(status);
-        console.log(typeof result.output.speed_post);
         let response_obj = {
             receiver: result.output.receiver,
             sender: result.output.sender,
@@ -127,15 +124,14 @@ router.get('/:id', auth_post_office, async (req, res) => {
             attempts_sender: result.output.attempts_sen
         };
         res.status(200).send(response_obj);
-    } 
+    }
     catch (err) {
-        console.log('Route handler catch block');
-        console.log(err);
-        res.status(500).send('Server could not perform the action');
+        console.log('/registered-post/:id GET/ catch block');
+        next(err);
     }
 });
 
-router.get('/route-info/:id', auth_post_office, async (req, res) => {
+router.get('/route-info/:id', auth_post_office, async (req, res, next) => {
     try {
         console.log(req.params.id);
         let id_check = /^\d+$/.test(req.params.id);
@@ -153,13 +149,12 @@ router.get('/route-info/:id', auth_post_office, async (req, res) => {
         }
     }
     catch (err) {
-        console.log('Route handler catch block');
-        console.log(err);
-        res.status(500).send('Server could not perform the action');
+        console.log('/registered-post/route-info/:id GET/ catch block');
+        next(err);
     }
 });
 
-router.put('/location-update', auth_post_office, async (req, res) => {
+router.put('/location-update', auth_post_office, async (req, res, next) => {
     try {
         // body contains {id: '12', post_office: '10400'}
         // post office code can be extracted from the token.
@@ -181,15 +176,14 @@ router.put('/location-update', auth_post_office, async (req, res) => {
         else{
             res.status(400).send('Invalid details provided');
         }
-    } 
+    }
     catch (err) {
-        console.log('Route handler catch block');
-        console.log(err);
-        res.status(500).send('Server could not perform the action');
+        console.log('/registered-post/location-update PUT/ catch block');
+        next(err);
     }
 });
 
-router.put('/send-back', auth_post_office, async (req, res) => {
+router.put('/send-back', auth_post_office, async (req, res, next) => {
     try {
         // body contains {id: 17, post_office: '10400'}
         console.log(req.body);
@@ -213,13 +207,12 @@ router.put('/send-back', auth_post_office, async (req, res) => {
         }
     }
     catch (err) {
-        console.log('Route handler catch block');
-        console.log(err);
-        res.status(500).send('Server could not perform the action');
+        console.log('/registered-post/send-back PUT/ catch block');
+        next(err);
     }
 });
 
-router.put('/discard', auth_post_office, async (req, res) => {
+router.put('/discard', auth_post_office, async (req, res, next) => {
     try {
         //body contains address_id and post_office
         console.log(req.body);
@@ -241,11 +234,10 @@ router.put('/discard', auth_post_office, async (req, res) => {
         else{
             res.status(400).send('Invalid details provided');
         }
-    } 
+    }
     catch (err) {
-        console.log('Route handler catch block');
-        console.log(err);
-        res.status(500).send('Server could not perform the action');
+        console.log('/registered-post/discard PUT/ catch block');
+        next(err);
     }
 });
 

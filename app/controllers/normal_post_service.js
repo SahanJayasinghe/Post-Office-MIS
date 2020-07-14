@@ -24,22 +24,22 @@ router.post('/address', auth_post_office, async (req, res) => {
         }
         else{
             res.status(400).send('Invalid details provided');
-        }       
-    } 
+        }
+    }
     catch (err) {
         console.log('Route handler catch block');
         console.log(err);
-        res.status(500).send('Server could not perform the action'); 
+        res.status(500).send('Server could not perform the action');
     }
 });
 
-router.put('/', auth_post_office, async (req, res) => {
+router.put('/', auth_post_office, async (req, res, next) => {
     try {
         // id: 2, price: 16.50
         console.log(req.body);
         let body_length = Object.keys(req.body).length;
         let id_check = req.body.hasOwnProperty('id') && /^\d+$/.test(req.body.id);
-        
+
         if (body_length === 2 && id_check && req.body.hasOwnProperty('price')){
             let price_check = helper.validate_currency(req.body.price);
             if(price_check && (parseFloat(req.body.price) <= 1000)){
@@ -60,15 +60,14 @@ router.put('/', auth_post_office, async (req, res) => {
         else{
             res.status(400).send('Invalid details provided');
         }
-    } 
+    }
     catch (err) {
-        console.log('Route handler catch block');
-        console.log(err);
-        res.status(500).send('Server could not perform the action');
+        console.log('/normal-post PUT/ catch block');
+        next(err);
     }
 });
 
-router.get('/:id', auth_post_office, async (req, res) => {
+router.get('/:id', auth_post_office, async (req, res, next) => {
     try {
         console.log(req.params.id);
         let id_check = /^\d+$/.test(req.params.id);
@@ -81,18 +80,17 @@ router.get('/:id', auth_post_office, async (req, res) => {
         if(result.error){
             return res.status(400).send(result.error);
         }
-        delete result.output.address_id; 
+        delete result.output.address_id;
         delete result.output.total_price;
         res.status(200).send(result.output);
-    } 
+    }
     catch (err) {
-        console.log('Route handler catch block');
-        console.log(err);
-        res.status(500).send('Server could not perform the action');
+        console.log('/normal-post/:id GET/ catch block');
+        next(err);
     }
 });
 
-router.put('/discard', auth_post_office, async (req, res) => {
+router.put('/discard', auth_post_office, async (req, res, next) => {
     try {
         //body contains address_id and post_office
         console.log(req.body);
@@ -113,11 +111,10 @@ router.put('/discard', auth_post_office, async (req, res) => {
         else{
             res.status(400).send('Invalid details provided');
         }
-    } 
+    }
     catch (err) {
-        console.log('Route handler catch block');
-        console.log(err);
-        res.status(500).send('Server could not perform the action');
+        console.log('/normal-post/discard PUT/ catch block');
+        next(err);
     }
 });
 
