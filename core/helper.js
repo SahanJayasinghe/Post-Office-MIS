@@ -1,23 +1,29 @@
 function dt_local(dtISO){
     let dt = new Date(dtISO);
-    let date = dt.toLocaleDateString("en-US", {timeZone: "Asia/Colombo"}).split('/');
-    let time = dt.toTimeString("en-US", {timeZone: "Asia/Colombo"}).split(' ');
-    let dt_str = `${date[2]}-${date[0]}-${date[1]} ${time[0]}`;
-    return dt_str;
+    let dt_sl = dt.toLocaleString('en-US', {hour12: false, timeZone: 'Asia/Colombo'}).split(', ');
+    let date = dt_sl[0].split('/');
+    // let date = dt.toLocaleDateString("en-US", {timeZone: "Asia/Colombo"}).split('/');
+    // let time = dt.toTimeString("en-US", {timeZone: "Asia/Colombo"}).split(' ');
+    let dt_formatted = `${date[2]}-${date[0]}-${date[1]} ${dt_sl[1]}`;
+    return dt_formatted;
 }
 
 function current_dt_str(){
     let dt = new Date();
-    let date = dt.toLocaleDateString("en-US", {timeZone: "Asia/Colombo"}).split('/');
-    let time = dt.toTimeString("en-US", {timeZone: "Asia/Colombo"}).split(' ');
-    let dt_str = `${date[2]}-${date[0]}-${date[1]} ${time[0]}`;
-    return dt_str;
+    let dt_sl = dt.toLocaleString('en-US', {hour12: false, timeZone: 'Asia/Colombo'}).split(', ');
+    let date = dt_sl[0].split('/');
+    // let date = dt.toLocaleDateString().split('/');
+    // let time = dt.toTimeString().split(' ');
+    let dt_formatted = `${date[2]}-${date[0]}-${date[1]} ${dt_sl[1]}`;
+    return dt_formatted;
 }
 
 function get_dt_str(dt_obj){
-    let date = dt_obj.toLocaleDateString("en-US", {timeZone: "Asia/Colombo"}).split('/');
-    let time = dt_obj.toTimeString("en-US", {timeZone: "Asia/Colombo"}).split(' ');
-    let dt_str = `${date[2]}-${date[0]}-${date[1]} ${time[0]}`;
+    let dt_sl = dt_obj.toLocaleString('en-US', {hour12: false, timeZone: 'Asia/Colombo'}).split(', ');
+    let date = dt_sl[0].split('/');
+    // let date = dt_obj.toLocaleDateString("en-US", {timeZone: "Asia/Colombo"}).split('/');
+    // let time = dt_obj.toTimeString("en-US", {timeZone: "Asia/Colombo"}).split(' ');
+    let dt_str = `${date[2]}-${date[0]}-${date[1]} ${dt_sl[1]}`;
     return dt_str;
 }
 
